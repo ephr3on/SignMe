@@ -42,7 +42,7 @@ struct SignaturesView: View {
                     SectionLabel("Saved")
                     if signatures.isEmpty {
                         Text("No signatures yet. Draw one above and tap Save.")
-                            .font(.subheadline)
+                            .font(.app(.subheadline))
                             .foregroundStyle(Theme.textSecondary)
                             .card(padding: 14, radius: 16)
                     } else {
@@ -60,12 +60,12 @@ struct SignaturesView: View {
                     Toggle(isOn: askEveryTime) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Ask on every export")
-                                .font(.body.weight(.semibold))
+                                .font(.app(.body, .semibold))
                                 .foregroundStyle(Theme.textPrimary)
                             Text(defaultSignatureID.isEmpty
                                  ? "You choose a signature each time you export."
                                  : "Off: your default signature is used automatically.")
-                                .font(.caption)
+                                .font(.app(.caption))
                                 .foregroundStyle(Theme.textSecondary)
                         }
                     }
@@ -102,7 +102,7 @@ struct SignaturesView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
             Text("Sign above the line with your finger")
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(Color(hex: 0x6B6455))
                 .padding(.leading, 24)
                 .padding(.bottom, 14)
@@ -119,11 +119,11 @@ struct SignaturesView: View {
                 .frame(width: 96, height: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(signature.name)
-                    .font(.body.weight(.semibold))
+                    .font(.app(.body, .semibold))
                     .foregroundStyle(Theme.textPrimary)
                 if isDefault {
                     Text("Default for exports")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(.caption, .semibold))
                         .foregroundStyle(Theme.gold)
                 }
             }
@@ -137,7 +137,7 @@ struct SignaturesView: View {
                 Button("Delete", systemImage: "trash", role: .destructive) { signaturePendingDelete = signature }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.body.weight(.semibold))
+                    .font(.app(.body, .semibold))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
@@ -195,7 +195,7 @@ struct SignatureThumbnail: View {
                         .padding(4)
                 } else {
                     Text("None")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(.caption, .semibold))
                         .foregroundStyle(Color(hex: 0x6B6455))
                 }
             }

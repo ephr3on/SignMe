@@ -5,35 +5,44 @@ enum AppTab: Hashable {
     case home, jobs, search, settings
 }
 
-/// Root navigation: four tabs, each with its own NavigationStack (kept alive so
-/// pushed screens and scroll positions survive tab switches), and a custom tab
-/// bar with a raised gold "+" button that opens a new entry from anywhere.
+/// Root navigation: a native TabView (each tab keeps its own NavigationStack and
+/// scroll position) with the system tab bar hidden and our own bar in its place —
+/// Home, Jobs, a raised gold "+" that opens a new entry from anywhere, Search, Settings.
+/// The custom bar steps aside while the keyboard is up, so typing never hides content.
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var showingNewEntry = false
+    @State private var keyboardVisible = false
 
     var body: some View {
-        ZStack {
-            tabRoot(.home) { DashboardView() }
-            tabRoot(.jobs) { JobListView() }
-            tabRoot(.search) { SearchWorkEntryView() }
-            tabRoot(.settings) { SettingsView() }
+        TabView(selection: $selectedTab) {
+            tab(.home) { DashboardView() }
+            tab(.jobs) { JobListView() }
+            tab(.search) { SearchWorkEntryView() }
+            tab(.settings) { SettingsView() }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            AppTabBar(selection: $selectedTab) { showingNewEntry = true }
+            if !keyboardVisible {
+                AppTabBar(selection: $selectedTab) { showingNewEntry = true }
+                    .transition(.opacity)
+            }
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
         .background(Theme.background.ignoresSafeArea())
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.15)) { keyboardVisible = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.15)) { keyboardVisible = false }
+        }
         .sheet(isPresented: $showingNewEntry) {
             EntryFormView()
         }
     }
 
-    private func tabRoot<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
+    private func tab<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack { content() }
-            .opacity(selectedTab == tab ? 1 : 0)
-            .allowsHitTesting(selectedTab == tab)
-            .accessibilityHidden(selectedTab != tab)
+            .tag(tab)
+            .toolbar(.hidden, for: .tabBar)
     }
 }
 
@@ -69,7 +78,7 @@ struct AppTabBar: View {
                     .font(.system(size: 21, weight: .medium))
                     .frame(height: 26)
                 Text(title)
-                    .font(.caption2.weight(.semibold))
+                    .font(.app(.caption2, .semibold))
             }
             .foregroundStyle(isSelected ? Theme.gold : Theme.textTertiary)
             .frame(maxWidth: .infinity, minHeight: 48)

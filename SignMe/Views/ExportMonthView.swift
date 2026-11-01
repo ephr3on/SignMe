@@ -149,15 +149,15 @@ struct ExportMonthSheet: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(selectedProject?.name ?? "Choose a project")
-                            .font(.body.weight(.semibold))
+                            .font(.app(.body, .semibold))
                             .foregroundStyle(Theme.textPrimary)
                         Text(selectedProject?.job?.name ?? "Which project's hours?")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.footnote.weight(.semibold))
+                        .font(.app(.footnote, .semibold))
                         .foregroundStyle(Theme.gold)
                 }
                 .card(padding: 14, radius: 16, highlighted: selectedProject == nil)
@@ -174,7 +174,7 @@ struct ExportMonthSheet: View {
                         .font(Theme.display(.headline))
                         .foregroundStyle(Theme.textPrimary)
                     Text("\(matchingEntries.count) \(matchingEntries.count == 1 ? "entry" : "entries") · \(DateDurationService.formattedDuration(hours: totalHours))")
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(matchingEntries.isEmpty ? Theme.textTertiary : Theme.textSecondary)
                         .monospacedDigit()
                 }
@@ -196,7 +196,7 @@ struct ExportMonthSheet: View {
             HStack {
                 SectionLabel("Sign with")
                 Button("+ New signature") { showingSignatures = true }
-                    .font(.footnote.weight(.bold))
+                    .font(.app(.footnote, .bold))
                     .foregroundStyle(Theme.gold)
             }
 
@@ -206,10 +206,10 @@ struct ExportMonthSheet: View {
                         .frame(width: 96, height: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(defaultSignature.name)
-                            .font(.body.weight(.semibold))
+                            .font(.app(.body, .semibold))
                             .foregroundStyle(Theme.textPrimary)
                         Text("Your default — used automatically")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
@@ -217,7 +217,7 @@ struct ExportMonthSheet: View {
                         selectedSignatureID = defaultSignature.id
                         changingSignature = true
                     }
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
                     .foregroundStyle(Theme.gold)
                 }
                 .card(padding: 12, radius: 16)
@@ -238,10 +238,10 @@ struct ExportMonthSheet: View {
                 Toggle(isOn: $useAsDefault) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Use as default")
-                            .font(.body.weight(.semibold))
+                            .font(.app(.body, .semibold))
                             .foregroundStyle(Theme.textPrimary)
                         Text("Next time, export without asking")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -257,7 +257,7 @@ struct ExportMonthSheet: View {
                 SignatureThumbnail(signature: signature)
                     .frame(height: 58)
                 Text(signature?.name ?? "No signature")
-                    .font(.caption.weight(.semibold))
+                    .font(.app(.caption, .semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
             }
@@ -270,7 +270,7 @@ struct ExportMonthSheet: View {
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
+                        .font(.app(.title3))
                         .foregroundStyle(Theme.onGold, Theme.goldFill)
                         .padding(6)
                 }
@@ -308,7 +308,7 @@ struct ExportMonthSheet: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Total: \(DateDurationService.formattedDuration(hours: totalHours)) (\(DateDurationService.formattedDecimalHours(totalHours)) h)")
-                        .font(.caption.weight(.bold))
+                        .font(.app(.caption, .bold))
                     Spacer()
                 }
                 .padding(.bottom, 6)
@@ -326,13 +326,13 @@ struct ExportMonthSheet: View {
                             Spacer(minLength: 4)
                             if activeSignature != nil {
                                 Text(dateText)
-                                    .font(.caption2.weight(.semibold))
+                                    .font(.app(.caption2, .semibold))
                             }
                         }
                         .frame(height: 36)
                         Rectangle().fill(Color(hex: 0x1B2333)).frame(height: 1)
                         Text(signerName.isEmpty ? "Date, signature (employee)" : "Date, signature — \(signerName)")
-                            .font(.system(size: 9))
+                            .font(.appSize(10, relativeTo: .caption2))
                             .foregroundStyle(Color(hex: 0x5B6474))
                             .lineLimit(1)
                     }
@@ -341,7 +341,7 @@ struct ExportMonthSheet: View {
                             Spacer().frame(height: 36)
                             Rectangle().fill(Color(hex: 0x1B2333)).frame(height: 1)
                             Text("Date, signature (supervisor)")
-                                .font(.system(size: 9))
+                                .font(.appSize(10, relativeTo: .caption2))
                                 .foregroundStyle(Color(hex: 0x5B6474))
                                 .lineLimit(1)
                         }
@@ -396,7 +396,7 @@ struct GoldCheckboxToggleStyle: ToggleStyle {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                    .font(.title2)
+                    .font(.app(.title2))
                     .foregroundStyle(configuration.isOn ? Theme.gold : Theme.textSecondary)
                 configuration.label
                 Spacer(minLength: 0)

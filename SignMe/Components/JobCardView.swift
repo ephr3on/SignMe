@@ -7,7 +7,7 @@ struct JobCardView: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: "briefcase.fill")
-                .font(.title3)
+                .font(.app(.title3))
                 .foregroundStyle(Theme.onGold)
                 .frame(width: 44, height: 44)
                 .background(Theme.goldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -18,12 +18,12 @@ struct JobCardView: View {
                     .foregroundStyle(Theme.textPrimary)
 
                 Text("\(job.projects.count) project\(job.projects.count == 1 ? "" : "s") · \(DateDurationService.formattedDuration(hours: job.totalHours))")
-                    .font(.caption)
+                    .font(.app(.caption))
                     .foregroundStyle(Theme.textSecondary)
 
                 if let last = job.lastActivityDate {
                     Text("Last activity \(DateDurationService.relativeFormatter.localizedString(for: last, relativeTo: .now))")
-                        .font(.caption2)
+                        .font(.app(.caption2))
                         .foregroundStyle(Theme.textTertiary)
                 }
             }
@@ -31,7 +31,7 @@ struct JobCardView: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.app(.caption, .semibold))
                 .foregroundStyle(Theme.textTertiary)
         }
         .card(padding: 16, radius: 20)

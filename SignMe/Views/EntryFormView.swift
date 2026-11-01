@@ -215,23 +215,23 @@ struct EntryFormView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
-                    .font(.body.weight(.semibold))
+                    .font(.app(.body, .semibold))
                     .foregroundStyle(Theme.onGold)
                     .frame(width: 38, height: 38)
                     .background(Theme.goldFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(selectedProject?.name ?? "Choose a project")
-                        .font(.body.weight(.semibold))
+                        .font(.app(.body, .semibold))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                     Text(projectSubtitle)
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
                 Text("Change")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(.footnote, .semibold))
                     .foregroundStyle(Theme.gold)
             }
             .card(padding: 12, radius: 16, highlighted: true)
@@ -285,7 +285,7 @@ struct EntryFormView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     Text("Break")
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(Theme.textSecondary)
                     ForEach(Self.breakPresets, id: \.self) { minutes in
                         ChoiceChip(
@@ -321,7 +321,7 @@ struct EntryFormView: View {
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(DateDurationService.formattedDuration(hours: workedHours))
-                    .font(.title3.weight(.bold))
+                    .font(.app(.title3, .bold))
                     .foregroundStyle(isTimeValid && isBreakValid ? Theme.gold : Theme.textTertiary)
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -342,7 +342,7 @@ struct EntryFormView: View {
     private func timeCard(title: String, selection: Binding<Date>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(Theme.textSecondary)
             DatePicker(title, selection: selection, displayedComponents: .hourAndMinute)
                 .labelsHidden()
@@ -353,7 +353,7 @@ struct EntryFormView: View {
 
     private func validationLabel(_ text: String) -> some View {
         Label(text, systemImage: "exclamationmark.triangle.fill")
-            .font(.footnote)
+            .font(.app(.footnote))
             .foregroundStyle(Theme.danger)
     }
 
@@ -376,7 +376,7 @@ struct EntryFormView: View {
                                 taskDescription = suggestion
                             } label: {
                                 Text(suggestion)
-                                    .font(.footnote)
+                                    .font(.app(.footnote))
                                     .foregroundStyle(Theme.textPrimary)
                                     .lineLimit(1)
                                     .padding(.horizontal, 12)

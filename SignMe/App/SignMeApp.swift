@@ -17,6 +17,7 @@ struct SignMeApp: App {
     @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
 
     init() {
+        AppFonts.register()
         Theme.configureAppearance()
     }
 
@@ -28,6 +29,7 @@ struct SignMeApp: App {
                 .environment(timerStore)
                 .preferredColorScheme(theme.colorScheme)
                 .tint(Theme.gold)
+                .font(.app(.body))
         }
         .modelContainer(modelContainer)
     }

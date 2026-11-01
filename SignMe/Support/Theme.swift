@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreText
 
 /// The user's appearance choice in Settings. Light is the default.
 enum AppTheme: String, CaseIterable, Identifiable {
@@ -80,12 +81,12 @@ enum Theme {
 
     // MARK: Type
 
-    /// Serif display type for titles (Apple's "New York").
+    /// Serif display type for titles (Source Serif 4).
     static func display(_ style: Font.TextStyle, weight: Font.Weight = .semibold) -> Font {
-        .system(style, design: .serif, weight: weight)
+        .display(style, weight == .bold || weight == .heavy || weight == .black ? .bold : .semibold)
     }
 
-    static let sectionLabel = Font.system(.caption, weight: .semibold)
+    static let sectionLabel = Font.app(.caption, .bold)
 
     // MARK: UIKit appearance
 
@@ -103,28 +104,127 @@ enum Theme {
         navigation.shadowColor = .clear
         navigation.largeTitleTextAttributes = [
             .foregroundColor: textPrimaryUI,
-            .font: serifFont(size: 32, weight: .semibold)
+            .font: AppFonts.uiFont(AppFonts.serifSemiBold, size: 32, textStyle: .largeTitle)
         ]
         navigation.titleTextAttributes = [
             .foregroundColor: textPrimaryUI,
-            .font: serifFont(size: 17, weight: .semibold)
+            .font: AppFonts.uiFont(AppFonts.serifSemiBold, size: 18, textStyle: .headline)
         ]
+        let barButtonFont = AppFonts.uiFont(AppFonts.sans(.semibold), size: 17, textStyle: .body)
+        let buttonAppearance = UIBarButtonItemAppearance()
+        buttonAppearance.normal.titleTextAttributes = [.font: barButtonFont]
+        navigation.buttonAppearance = buttonAppearance
+        navigation.doneButtonAppearance = buttonAppearance
+        navigation.backButtonAppearance = buttonAppearance
+
         UINavigationBar.appearance().standardAppearance = navigation
         UINavigationBar.appearance().scrollEdgeAppearance = navigation
         UINavigationBar.appearance().compactAppearance = navigation
         UINavigationBar.appearance().tintColor = goldUI
 
+        // The app draws its own tab bar (see AppTabBar); keep the system one hidden everywhere.
+        UITabBar.appearance().isHidden = true
+
         let segmented = UISegmentedControl.appearance()
         segmented.selectedSegmentTintColor = adaptiveUIColor(light: 0xFFFFFF, dark: 0x22365A)
         segmented.backgroundColor = adaptiveUIColor(light: 0xE6E0D2, dark: 0x13223A)
-        segmented.setTitleTextAttributes([.foregroundColor: textSecondaryUI], for: .normal)
-        segmented.setTitleTextAttributes([.foregroundColor: textPrimaryUI], for: .selected)
+        segmented.setTitleTextAttributes([
+            .foregroundColor: textSecondaryUI,
+            .font: AppFonts.uiFont(AppFonts.sans(.medium), size: 14, textStyle: .subheadline)
+        ], for: .normal)
+        segmented.setTitleTextAttributes([
+            .foregroundColor: textPrimaryUI,
+            .font: AppFonts.uiFont(AppFonts.sans(.bold), size: 14, textStyle: .subheadline)
+        ], for: .selected)
+    }
+}
+
+// MARK: - Fonts
+
+/// Weights available in the bundled UI font.
+enum AppWeight {
+    case regular, medium, semibold, bold
+
+    init(_ weight: Font.Weight) {
+        switch weight {
+        case .ultraLight, .thin, .light, .regular: self = .regular
+        case .medium: self = .medium
+        case .semibold: self = .semibold
+        default: self = .bold
+        }
+    }
+}
+
+/// The app's two bundled typefaces (SIL Open Font License, files in Resources/Fonts):
+/// - Plus Jakarta Sans — friendly, very legible UI text with tabular figures.
+/// - Source Serif 4 — calm serif for titles.
+/// Every size scales with the user's Dynamic Type setting.
+enum AppFonts {
+    static let serifSemiBold = "SourceSerif4-SemiBold"
+    static let serifBold = "SourceSerif4-Bold"
+
+    static func sans(_ weight: AppWeight) -> String {
+        switch weight {
+        case .regular: return "PlusJakartaSans-Regular"
+        case .medium: return "PlusJakartaSans-Medium"
+        case .semibold: return "PlusJakartaSans-SemiBold"
+        case .bold: return "PlusJakartaSans-Bold"
+        }
     }
 
-    private static func serifFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
-        let base = UIFont.systemFont(ofSize: size, weight: weight)
-        guard let descriptor = base.fontDescriptor.withDesign(.serif) else { return base }
-        return UIFont(descriptor: descriptor, size: size)
+    /// Base point sizes at the default text size (close to Apple's, a touch larger
+    /// for the smallest styles so small labels stay comfortable to read).
+    static func baseSize(_ style: Font.TextStyle) -> CGFloat {
+        switch style {
+        case .largeTitle: return 34
+        case .title: return 28
+        case .title2: return 22
+        case .title3: return 20
+        case .headline: return 17
+        case .body: return 17
+        case .callout: return 16
+        case .subheadline: return 15
+        case .footnote: return 13.5
+        case .caption: return 12.5
+        case .caption2: return 11.5
+        @unknown default: return 17
+        }
+    }
+
+    /// Registers the bundled font files with the system. Call once, before any UI is built.
+    static func register() {
+        let names = ["PlusJakartaSans-Regular", "PlusJakartaSans-Medium", "PlusJakartaSans-SemiBold",
+                     "PlusJakartaSans-Bold", "SourceSerif4-SemiBold", "SourceSerif4-Bold"]
+        for name in names {
+            guard UIFont(name: name, size: 12) == nil,
+                  let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
+
+    /// A UIKit font that follows Dynamic Type, falling back to the system font.
+    static func uiFont(_ name: String, size: CGFloat, textStyle: UIFont.TextStyle) -> UIFont {
+        let base = UIFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: name.contains("Bold") ? .bold : .regular)
+        return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: base)
+    }
+}
+
+extension Font {
+    /// UI text in Plus Jakarta Sans. Headlines default to semibold, everything else to regular.
+    static func app(_ style: Font.TextStyle, _ weight: AppWeight? = nil) -> Font {
+        let resolved = weight ?? (style == .headline ? .semibold : .regular)
+        return .custom(AppFonts.sans(resolved), size: AppFonts.baseSize(style), relativeTo: style)
+    }
+
+    /// UI text at a specific size (still scales with Dynamic Type relative to `relativeTo`).
+    static func appSize(_ size: CGFloat, _ weight: AppWeight = .regular, relativeTo style: Font.TextStyle = .body) -> Font {
+        .custom(AppFonts.sans(weight), size: size, relativeTo: style)
+    }
+
+    /// Titles in Source Serif 4.
+    static func display(_ style: Font.TextStyle, _ weight: AppWeight = .semibold) -> Font {
+        let name = weight == .bold ? AppFonts.serifBold : AppFonts.serifSemiBold
+        return .custom(name, size: AppFonts.baseSize(style), relativeTo: style)
     }
 }
 
@@ -218,7 +318,7 @@ struct GoldButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.headline)
+                .font(.app(.headline, .bold))
                 .foregroundStyle(Theme.onGold.opacity(isEnabled ? 1 : 0.6))
                 .frame(maxWidth: .infinity, minHeight: height)
                 .background(
@@ -236,7 +336,7 @@ struct OutlineButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.app(.headline, .bold))
             .foregroundStyle(Theme.textPrimary)
             .frame(maxWidth: .infinity, minHeight: height)
             .background(
@@ -262,10 +362,10 @@ struct ChoiceChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 if let systemImage {
-                    Image(systemName: systemImage).font(.footnote.weight(.semibold))
+                    Image(systemName: systemImage).font(.app(.footnote, .semibold))
                 }
                 Text(title)
-                    .font(.subheadline.weight(isSelected ? .bold : .semibold))
+                    .font(.app(.subheadline, isSelected ? .bold : .semibold))
             }
             .foregroundStyle(isSelected ? Theme.onGold : Theme.textPrimary)
             .padding(.horizontal, 14)
@@ -297,7 +397,7 @@ struct ProgressRing: View {
                 .stroke(Theme.goldFill, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text(label)
-                .font(.subheadline.weight(.bold))
+                .font(.app(.subheadline, .bold))
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
         }

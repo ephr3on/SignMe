@@ -63,7 +63,7 @@ struct MonthCalendarView: View {
     private var monthHeader: some View {
         HStack {
             Button { shiftMonth(-1) } label: {
-                Image(systemName: "chevron.left").font(.body.weight(.semibold)).frame(width: 44, height: 44)
+                Image(systemName: "chevron.left").font(.app(.body, .semibold)).frame(width: 44, height: 44)
             }
             .accessibilityLabel("Previous month")
             Spacer()
@@ -72,13 +72,13 @@ struct MonthCalendarView: View {
                     .font(Theme.display(.title3))
                     .foregroundStyle(Theme.textPrimary)
                 Text("\(DateDurationService.formattedDuration(hours: monthTotal)) · \(DateDurationService.formattedDecimalHours(monthTotal)) h · \(hoursByDay.count) \(hoursByDay.count == 1 ? "day" : "days")")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
             Spacer()
             Button { shiftMonth(1) } label: {
-                Image(systemName: "chevron.right").font(.body.weight(.semibold)).frame(width: 44, height: 44)
+                Image(systemName: "chevron.right").font(.app(.body, .semibold)).frame(width: 44, height: 44)
             }
             .accessibilityLabel("Next month")
         }
@@ -94,7 +94,7 @@ struct MonthCalendarView: View {
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol.uppercased())
-                        .font(.caption2.weight(.semibold))
+                        .font(.app(.caption2, .semibold))
                         .foregroundStyle(Theme.textTertiary)
                         .accessibilityHidden(true)
                 }
@@ -122,9 +122,9 @@ struct MonthCalendarView: View {
         } label: {
             VStack(spacing: 4) {
                 Text("\(day)")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
                 Text(hours > 0 ? compactHours(hours) : " ")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.appSize(11, .semibold, relativeTo: .caption2))
                     .monospacedDigit()
             }
             .foregroundStyle(isSelected ? Theme.onGold : (hours > 0 ? Theme.textPrimary : Theme.textTertiary))
@@ -156,13 +156,13 @@ struct MonthCalendarView: View {
                     .foregroundStyle(Theme.textPrimary)
                  + Text(dayTotal > 0 ? "  · \(DateDurationService.formattedDuration(hours: dayTotal))" : "")
                     .foregroundStyle(Theme.gold))
-                    .font(.headline)
+                    .font(.app(.headline))
                 Spacer()
                 Button {
                     onAdd(selectedDay)
                 } label: {
                     Label("Add", systemImage: "plus")
-                        .font(.subheadline.weight(.bold))
+                        .font(.app(.subheadline, .bold))
                         .frame(minHeight: 44)
                 }
                 .foregroundStyle(Theme.gold)
@@ -170,7 +170,7 @@ struct MonthCalendarView: View {
 
             if entries.isEmpty {
                 Text("No entries on this day.")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
                     .card(padding: 14, radius: 16)
             } else {

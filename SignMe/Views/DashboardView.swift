@@ -70,14 +70,14 @@ struct DashboardView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("SIGNME")
-                    .font(.system(.footnote, design: .serif, weight: .semibold))
+                    .font(.display(.footnote))
                     .tracking(3)
                     .foregroundStyle(Theme.gold)
                 Text(greeting)
                     .font(Theme.display(.title))
                     .foregroundStyle(Theme.textPrimary)
                 Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -85,7 +85,7 @@ struct DashboardView: View {
                 showingExportMonth = true
             } label: {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.body.weight(.semibold))
+                    .font(.app(.body, .semibold))
                     .foregroundStyle(Theme.gold)
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Theme.surface))
@@ -137,7 +137,7 @@ struct DashboardView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.body.weight(.semibold))
+                        .font(.app(.body, .semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(width: 44, height: 32)
                         .contentShape(Rectangle())
@@ -148,21 +148,21 @@ struct DashboardView: View {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(TimerStore.clockText(timer.workedDuration(at: context.date)))
-                        .font(.system(size: 46, weight: .semibold, design: .rounded))
+                        .font(.appSize(46, .semibold, relativeTo: .largeTitle))
                         .monospacedDigit()
                         .foregroundStyle(timer.isOnBreak ? Theme.textSecondary : Theme.textPrimary)
                         .accessibilityLabel("Worked \(DateDurationService.formattedDuration(hours: timer.workedDuration(at: context.date) / 3600))")
                     let breakTime = timer.breakDuration(at: context.date)
                     if breakTime >= 60 {
                         Text("Break \(DateDurationService.formattedDuration(hours: breakTime / 3600))")
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
             }
 
             Text(runningProjectLine)
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
 
@@ -199,7 +199,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: "timer")
-                    .font(.title3.weight(.semibold))
+                    .font(.app(.title3, .semibold))
                     .foregroundStyle(Theme.gold)
                 Text("Ready to clock in?")
                     .font(Theme.display(.title3))
@@ -208,7 +208,7 @@ struct DashboardView: View {
 
             if allProjects.isEmpty {
                 Text("Create a job and a project in the Jobs tab to start tracking time.")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
             } else {
                 Menu {
@@ -217,15 +217,15 @@ struct DashboardView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(idleProject?.name ?? "Choose a project")
-                                .font(.body.weight(.semibold))
+                                .font(.app(.body, .semibold))
                                 .foregroundStyle(Theme.textPrimary)
                             Text(idleProject?.job?.name ?? "")
-                                .font(.caption)
+                                .font(.app(.caption))
                                 .foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.footnote.weight(.semibold))
+                            .font(.app(.footnote, .semibold))
                             .foregroundStyle(Theme.gold)
                     }
                     .padding(12)
@@ -295,28 +295,28 @@ struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         SectionLabel("\(Date.now.formatted(.dateTime.month(.wide))) target")
                         (Text(DateDurationService.formattedDuration(hours: monthHours))
-                            .font(.title2.weight(.bold))
+                            .font(.app(.title2, .bold))
                             .foregroundStyle(Theme.textPrimary)
                          + Text("  of \(DateDurationService.formattedDuration(hours: monthlyTarget))")
-                            .font(.subheadline)
+                            .font(.app(.subheadline))
                             .foregroundStyle(Theme.textSecondary))
                             .monospacedDigit()
                         Text(targetRemainingText)
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .foregroundStyle(Theme.textSecondary)
                     }
                 } else {
                     Image(systemName: "target")
-                        .font(.title2)
+                        .font(.app(.title2))
                         .foregroundStyle(Theme.gold)
                         .frame(width: 52, height: 52)
                         .background(Circle().fill(Theme.surfaceRaised))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Set a monthly target")
-                            .font(.headline)
+                            .font(.app(.headline))
                             .foregroundStyle(Theme.textPrimary)
                         Text("See your progress toward your contract hours.")
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -386,7 +386,7 @@ struct DashboardView: View {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel("This week")
                 Text(DateDurationService.formattedDuration(hours: total))
-                    .font(.headline)
+                    .font(.app(.headline))
                     .foregroundStyle(Theme.textPrimary)
                     .monospacedDigit()
             }
@@ -402,6 +402,7 @@ struct DashboardView: View {
             .chartXAxis {
                 AxisMarks { _ in
                     AxisValueLabel()
+                        .font(.app(.caption2, .medium))
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -476,12 +477,12 @@ struct MonthlyTargetEditor: View {
         NavigationStack {
             VStack(spacing: 20) {
                 Text("How many hours do you want to work each month?")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
                 Stepper(value: $hours, in: 1...400) {
                     Text("\(hours) h per month")
-                        .font(.title3.weight(.bold))
+                        .font(.app(.title3, .bold))
                         .foregroundStyle(Theme.textPrimary)
                         .monospacedDigit()
                 }

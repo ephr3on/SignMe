@@ -246,14 +246,14 @@ struct WorkEntryListView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: isYearExpanded(group.id) ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
-                    .font(.title3)
+                    .font(.app(.title3))
                     .foregroundStyle(Theme.gold)
                 Text(String(group.year))
                     .font(Theme.display(.title3))
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(DateDurationService.formattedDuration(hours: yearHours))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
@@ -271,18 +271,18 @@ struct WorkEntryListView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: isMonthExpanded(group.id) ? "chevron.down" : "chevron.right")
-                    .font(.caption.weight(.bold))
+                    .font(.app(.caption, .bold))
                     .foregroundStyle(Theme.gold)
                     .frame(width: 14)
                 Text(DateDurationService.monthYearFormatter.string(from: group.month))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text("\(group.entries.count) \(group.entries.count == 1 ? "entry" : "entries")")
-                    .font(.caption2)
+                    .font(.app(.caption2))
                     .foregroundStyle(Theme.textSecondary)
                 Text(DateDurationService.formattedDuration(hours: group.entries.reduce(0) { $0 + $1.durationHours }))
-                    .font(.caption.weight(.semibold))
+                    .font(.app(.caption, .semibold))
                     .foregroundStyle(Theme.gold)
                     .monospacedDigit()
             }
@@ -364,10 +364,10 @@ struct WorkEntryListView: View {
                     toggleSelectAll()
                 }
                 .disabled(visibleEntries.isEmpty)
-                .font(.subheadline.weight(.semibold))
+                .font(.app(.subheadline, .semibold))
                 Spacer()
                 Button("Cancel") { exitSelectionMode() }
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
             }
         }
         .padding(.horizontal, 20)
@@ -381,7 +381,7 @@ struct WorkEntryListView: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                Text(title).font(.caption2)
+                Text(title).font(.app(.caption2))
             }
             .frame(minWidth: 44, minHeight: 44)
         }

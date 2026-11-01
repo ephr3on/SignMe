@@ -11,7 +11,7 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.system(size: 36))
+                .font(.system(size: 34, weight: .regular))
                 .foregroundStyle(Theme.gold)
                 .padding(22)
                 .background(Theme.surfaceRaised, in: Circle())
@@ -21,7 +21,7 @@ struct EmptyStateView: View {
                     .font(Theme.display(.title3))
                     .foregroundStyle(Theme.textPrimary)
                 Text(message)
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
             }

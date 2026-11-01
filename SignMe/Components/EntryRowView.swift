@@ -13,17 +13,17 @@ struct EntryRowView: View {
         HStack(spacing: 12) {
             if selectionMode {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
+                    .font(.app(.title3))
                     .foregroundStyle(isSelected ? Theme.gold : Theme.textTertiary)
                     .transition(.scale.combined(with: .opacity))
             }
 
             VStack(spacing: 0) {
                 Text(entry.date.formatted(.dateTime.weekday(.abbreviated)).uppercased())
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.appSize(11, .semibold, relativeTo: .caption2))
                     .foregroundStyle(Theme.textSecondary)
                 Text(entry.date.formatted(.dateTime.day()))
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.appSize(17, .bold, relativeTo: .headline))
                     .foregroundStyle(Theme.textPrimary)
                     .monospacedDigit()
             }
@@ -33,19 +33,19 @@ struct EntryRowView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.taskDescription.isEmpty ? "Untitled task" : entry.taskDescription)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline, .semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
 
                 if showsProjectContext, let project = entry.project {
                     Text("\(project.job?.name ?? "—") · \(project.name)")
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
 
                 Text(timeRangeText)
-                    .font(.caption)
+                    .font(.app(.caption))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
             }
@@ -53,7 +53,7 @@ struct EntryRowView: View {
             Spacer(minLength: 8)
 
             Text(DateDurationService.formattedDuration(hours: entry.durationHours))
-                .font(.subheadline.weight(.bold))
+                .font(.app(.subheadline, .bold))
                 .foregroundStyle(Theme.gold)
                 .monospacedDigit()
         }
