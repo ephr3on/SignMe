@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+
+# Local tool settings
+.claude/settings.local.json
+
+# Design source files (kept locally, not part of the app)
+/image.png
+/Adobe Express - file.png
+/Adobe Express - file_croped.png
+/candyicons-appicons-*.zip
+/icon_extract/
