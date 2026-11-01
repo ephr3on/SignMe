@@ -11,11 +11,13 @@ final class Project {
     @Relationship(deleteRule: .cascade, inverse: \WorkEntry.project)
     var entries: [WorkEntry] = []
 
-    init(id: UUID = UUID(), name: String, createdAt: Date = .now, job: Job? = nil) {
+    /// Creates a project that isn't attached to a job yet. Insert it into a
+    /// `ModelContext`, then attach it with `job.projects.append(project)` —
+    /// SwiftData sets `project.job` automatically through the inverse relationship.
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
-        self.job = job
     }
 
     var totalHours: Double {

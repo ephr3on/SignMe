@@ -206,15 +206,19 @@ struct DashboardView: View {
 }
 
 /// Presented from the Dashboard's "Export Month" quick action — exports one
-/// project's entries for a single month as JSON, ending with the total hours.
+/// project's entries for a single month as a signable PDF timesheet, ending
+/// with the total hours and signature lines.
 struct ExportMonthSheet: View {
     @Environment(\.dismiss) private var dismiss
     let jobs: [Job]
+
+    @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
 
     @State private var selectedJob: Job?
     @State private var selectedProject: Project?
     @State private var selectedMonthIndex: Int
     @State private var selectedYear: Int
+    @State private var shareItem: ShareItem?
 
     init(jobs: [Job]) {
         self.jobs = jobs
@@ -252,9 +256,16 @@ struct ExportMonthSheet: View {
         matchingEntries.reduce(0) { $0 + $1.durationHours }
     }
 
-    private var exportURL: URL? {
-        guard let job = selectedJob, let project = selectedProject, !matchingEntries.isEmpty else { return nil }
-        return ExportService.monthExportPDFURL(job: job, project: project, monthDate: monthDate, entries: matchingEntries)
+    private var canExport: Bool {
+        selectedJob != nil && selectedProject != nil && !matchingEntries.isEmpty
+    }
+
+    /// Renders the PDF only when the user taps Export, then opens the share sheet.
+    private func exportPDF() {
+        guard let job = selectedJob, let project = selectedProject, !matchingEntries.isEmpty else { return }
+        shareItem = ShareItem(
+            ExportService.monthExportPDFURL(job: job, project: project, monthDate: monthDate, entries: matchingEntries)
+        )
     }
 
     var body: some View {
@@ -337,8 +348,18 @@ struct ExportMonthSheet: View {
             }
 
             Section {
-                if let exportURL {
-                    ShareLink(item: exportURL) {
+                TextField("Your name", text: $signerName)
+                    .textContentType(.name)
+                    .autocorrectionDisabled()
+            } header: {
+                Text("Name on Timesheet")
+            } footer: {
+                Text("Printed at the top of the PDF and under your signature line. More options are in Settings.")
+            }
+
+            Section {
+                if canExport {
+                    Button(action: exportPDF) {
                         Label("Export Month (PDF)", systemImage: "square.and.arrow.up")
                     }
                 } else {
@@ -349,9 +370,10 @@ struct ExportMonthSheet: View {
                     .foregroundStyle(.secondary)
                 }
             } footer: {
-                Text("The exported PDF lists every entry for the selected project and month, with the total tracked hours at the end.")
+                Text("The exported A4 PDF lists every entry for the selected project and month, with the total tracked hours and signature lines at the end.")
             }
         }
+        .shareSheet(item: $shareItem)
     }
 }
 

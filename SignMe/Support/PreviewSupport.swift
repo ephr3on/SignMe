@@ -14,8 +14,8 @@ enum PreviewSupport {
         let job = Job(name: "Acme Studio")
         context.insert(job)
 
-        let websiteProject = Project(name: "Website Redesign", job: job)
-        let appProject = Project(name: "Mobile App", job: job)
+        let websiteProject = Project(name: "Website Redesign")
+        let appProject = Project(name: "Mobile App")
         context.insert(websiteProject)
         context.insert(appProject)
         job.projects = [websiteProject, appProject]
@@ -34,13 +34,19 @@ enum PreviewSupport {
             let day = calendar.date(byAdding: .day, value: -offset * 4, to: .now) ?? .now
             let start = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: day) ?? day
             let end = calendar.date(bySettingHour: 12, minute: 30, second: 0, of: day) ?? day
-            let entry = WorkEntry(date: day, startTime: start, endTime: end, taskDescription: descriptions[offset], project: websiteProject)
+            let entry = WorkEntry(
+                date: day,
+                startTime: start,
+                endTime: end,
+                breakMinutes: offset == 0 ? 30 : 0,
+                taskDescription: descriptions[offset]
+            )
             context.insert(entry)
             websiteProject.entries.append(entry)
         }
 
         let secondJob = Job(name: "Personal")
-        let learningProject = Project(name: "Learning SwiftUI", job: secondJob)
+        let learningProject = Project(name: "Learning SwiftUI")
         context.insert(secondJob)
         context.insert(learningProject)
         secondJob.projects = [learningProject]
@@ -55,6 +61,6 @@ enum PreviewSupport {
     }
 
     static var sampleProject: Project {
-        sampleJob.projects.first ?? Project(name: "Sample Project", job: sampleJob)
+        sampleJob.projects.first ?? Project(name: "Sample Project")
     }
 }

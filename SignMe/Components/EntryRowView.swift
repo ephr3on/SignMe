@@ -33,10 +33,7 @@ struct EntryRowView: View {
 
                 HStack(spacing: 10) {
                     Label(DateDurationService.dateFormatter.string(from: entry.date), systemImage: "calendar")
-                    Label(
-                        "\(DateDurationService.timeFormatter.string(from: entry.startTime))–\(DateDurationService.timeFormatter.string(from: entry.endTime))",
-                        systemImage: "clock"
-                    )
+                    Label(timeRangeText, systemImage: "clock")
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -54,6 +51,18 @@ struct EntryRowView: View {
         .padding(.vertical, 6)
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.15), value: selectionMode)
+    }
+
+    /// "09:00–17:00", plus "(+1)" for shifts past midnight and the break if any.
+    private var timeRangeText: String {
+        var text = "\(DateDurationService.timeFormatter.string(from: entry.startTime))–\(DateDurationService.timeFormatter.string(from: entry.endTime))"
+        if DateDurationService.spansMidnight(start: entry.startTime, end: entry.endTime) {
+            text += " (+1)"
+        }
+        if entry.breakMinutes > 0 {
+            text += " · \(DateDurationService.formattedDuration(hours: Double(entry.breakMinutes) / 60)) break"
+        }
+        return text
     }
 }
 

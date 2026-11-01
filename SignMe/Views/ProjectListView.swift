@@ -87,14 +87,23 @@ struct ProjectListView: View {
             }
         }
         .sheet(isPresented: $showingAddProject) {
-            NameEntrySheet(title: "New Project", fieldLabel: "Project Name") { name in
-                let project = Project(name: name, job: job)
+            NameEntrySheet(
+                title: "New Project",
+                fieldLabel: "Project Name",
+                existingNames: job.projects.map(\.name)
+            ) { name in
+                let project = Project(name: name)
                 modelContext.insert(project)
                 job.projects.append(project)
             }
         }
         .sheet(item: $projectToRename) { project in
-            NameEntrySheet(title: "Rename Project", fieldLabel: "Project Name", initialValue: project.name) { newName in
+            NameEntrySheet(
+                title: "Rename Project",
+                fieldLabel: "Project Name",
+                initialValue: project.name,
+                existingNames: job.projects.filter { $0.id != project.id }.map(\.name)
+            ) { newName in
                 project.name = newName
             }
         }
@@ -131,30 +140,25 @@ struct ProjectListView: View {
 
     private func copyProject(_ project: Project, into destinationJob: Job) {
         let newName = destinationJob.uniqueProjectName(base: project.name)
-        let newProject = Project(name: newName, job: destinationJob)
+        let newProject = Project(name: newName)
         modelContext.insert(newProject)
         destinationJob.projects.append(newProject)
 
         for entry in project.entries {
-            let copy = WorkEntry(
-                date: entry.date,
-                startTime: entry.startTime,
-                endTime: entry.endTime,
-                taskDescription: entry.taskDescription,
-                project: newProject
-            )
+            let copy = entry.duplicate()
             modelContext.insert(copy)
             newProject.entries.append(copy)
         }
     }
 
+    /// Relationships are always changed from the parent's side
+    /// (`job.projects`); SwiftData keeps `project.job` in sync.
     private func moveProject(_ project: Project, to destinationJob: Job) {
         guard destinationJob.id != project.job?.id else { return }
         if let currentJob = project.job, let idx = currentJob.projects.firstIndex(where: { $0.id == project.id }) {
             currentJob.projects.remove(at: idx)
         }
         project.name = destinationJob.uniqueProjectName(base: project.name)
-        project.job = destinationJob
         destinationJob.projects.append(project)
     }
 

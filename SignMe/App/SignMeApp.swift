@@ -1,11 +1,6 @@
 import SwiftUI
 import SwiftData
 
-// App Icon suggestion: a rounded-square icon in the app's accent blue,
-// featuring a simple clock face with a checkmark tick at the 2 o'clock
-// position (evokes "signing off" on tracked time). Keep it flat and
-// high-contrast so it reads well at small sizes; avoid text in the icon.
-
 @main
 struct SignMeApp: App {
     let modelContainer: ModelContainer = {

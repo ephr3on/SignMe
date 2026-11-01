@@ -13,6 +13,7 @@ struct EntryFormView: View {
     @State private var date: Date
     @State private var startTime: Date
     @State private var endTime: Date
+    @State private var breakMinutes: Int
     @State private var taskDescription: String
 
     init(project: Project, entryToEdit: WorkEntry? = nil) {
@@ -21,17 +22,30 @@ struct EntryFormView: View {
         _date = State(initialValue: entryToEdit?.date ?? .now)
         _startTime = State(initialValue: entryToEdit?.startTime ?? .now)
         _endTime = State(initialValue: entryToEdit?.endTime ?? Date().addingTimeInterval(3600))
+        _breakMinutes = State(initialValue: entryToEdit?.breakMinutes ?? 0)
         _taskDescription = State(initialValue: entryToEdit?.taskDescription ?? "")
     }
 
-    private var combinedStart: Date { DateDurationService.combine(day: date, time: startTime) }
-    private var combinedEnd: Date { DateDurationService.combine(day: date, time: endTime) }
+    private var interval: (start: Date, end: Date) {
+        DateDurationService.resolveInterval(day: date, start: startTime, end: endTime)
+    }
 
-    private var isTimeValid: Bool { DateDurationService.isValid(start: combinedStart, end: combinedEnd) }
+    private var spansMidnight: Bool {
+        DateDurationService.spansMidnight(start: interval.start, end: interval.end)
+    }
+
+    private var spanMinutes: Int {
+        Int((interval.end.timeIntervalSince(interval.start) / 60).rounded())
+    }
+
+    private var isTimeValid: Bool { DateDurationService.isValid(start: interval.start, end: interval.end) }
+    private var isBreakValid: Bool { breakMinutes >= 0 && breakMinutes < spanMinutes }
     private var isDescriptionValid: Bool { !taskDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-    private var isValid: Bool { isTimeValid && isDescriptionValid }
+    private var isValid: Bool { isTimeValid && isBreakValid && isDescriptionValid }
 
-    private var durationPreview: Double { DateDurationService.durationHours(from: combinedStart, to: combinedEnd) }
+    private var durationPreview: Double {
+        DateDurationService.durationHours(from: interval.start, to: interval.end, breakMinutes: breakMinutes)
+    }
 
     var body: some View {
         NavigationStack {
@@ -39,15 +53,43 @@ struct EntryFormView: View {
                 Section("When") {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                     DatePicker("Start", selection: $startTime, displayedComponents: .hourAndMinute)
-                    DatePicker("End", selection: $endTime, displayedComponents: .hourAndMinute)
+                    DatePicker(selection: $endTime, displayedComponents: .hourAndMinute) {
+                        HStack(spacing: 6) {
+                            Text("End")
+                            if spansMidnight {
+                                Text("+1 day")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.accentColor)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.accentColor.opacity(0.12), in: Capsule())
+                            }
+                        }
+                    }
+                    Stepper(value: $breakMinutes, in: 0...480, step: 5) {
+                        HStack {
+                            Text("Break")
+                            Spacer()
+                            Text(breakMinutes == 0 ? "None" : DateDurationService.formattedDuration(hours: Double(breakMinutes) / 60))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section {
                     durationPreviewRow
                     if !isTimeValid {
-                        Label("End time must be after start time.", systemImage: "exclamationmark.triangle.fill")
+                        Label("End time must be different from start time.", systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(.red)
+                    } else if !isBreakValid {
+                        Label("The break must be shorter than the time worked.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    } else if spansMidnight {
+                        Label("This entry runs past midnight and ends the next day.", systemImage: "moon.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -77,14 +119,15 @@ struct EntryFormView: View {
     }
 
     private var durationPreviewRow: some View {
-        HStack {
+        let isPositive = isTimeValid && isBreakValid
+        return HStack {
             Image(systemName: "clock.fill")
-                .foregroundStyle(isTimeValid ? Color.accentColor : Color.secondary)
+                .foregroundStyle(isPositive ? Color.accentColor : Color.secondary)
             Text("Duration")
             Spacer()
-            Text(DateDurationService.formattedDuration(hours: max(0, durationPreview)))
+            Text(DateDurationService.formattedDuration(hours: durationPreview))
                 .font(.headline)
-                .foregroundStyle(isTimeValid ? Color.accentColor : .secondary)
+                .foregroundStyle(isPositive ? Color.accentColor : .secondary)
                 .contentTransition(.numericText())
         }
         .animation(.easeInOut(duration: 0.2), value: durationPreview)
@@ -92,21 +135,24 @@ struct EntryFormView: View {
 
     private func save() {
         guard isValid else { return }
+        let resolved = interval
+        let description = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let entry = entryToEdit {
-            entry.date = date
-            entry.startTime = combinedStart
-            entry.endTime = combinedEnd
-            entry.durationHours = DateDurationService.durationHours(from: combinedStart, to: combinedEnd)
-            entry.taskDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            entry.date = resolved.start
+            entry.startTime = resolved.start
+            entry.endTime = resolved.end
+            entry.breakMinutes = breakMinutes
+            entry.taskDescription = description
+            entry.recalculateDuration()
             entry.updatedAt = .now
         } else {
             let entry = WorkEntry(
-                date: date,
-                startTime: combinedStart,
-                endTime: combinedEnd,
-                taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                project: project
+                date: resolved.start,
+                startTime: resolved.start,
+                endTime: resolved.end,
+                breakMinutes: breakMinutes,
+                taskDescription: description
             )
             modelContext.insert(entry)
             project.entries.append(entry)

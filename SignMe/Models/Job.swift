@@ -31,15 +31,23 @@ final class Job {
     /// Returns a name guaranteed not to collide with an existing project in this job,
     /// appending "Copy" / "Copy 2" / … as needed.
     func uniqueProjectName(base: String) -> String {
-        let existing = Set(projects.map { $0.name.lowercased() })
-        guard existing.contains(base.lowercased()) else { return base }
+        let existing = Set(projects.map(\.name.normalizedNameKey))
+        guard existing.contains(base.normalizedNameKey) else { return base }
 
         var candidate = "\(base) Copy"
         var counter = 2
-        while existing.contains(candidate.lowercased()) {
+        while existing.contains(candidate.normalizedNameKey) {
             candidate = "\(base) Copy \(counter)"
             counter += 1
         }
         return candidate
+    }
+}
+
+extension String {
+    /// The key used to compare job/project names: trimmed and case-insensitive,
+    /// so "Acme", "acme" and " ACME " count as the same name.
+    var normalizedNameKey: String {
+        trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }

@@ -1,33 +1,49 @@
 import Foundation
 import UIKit
 
-/// Builds CSV, JSON, and PDF exports and hands back a temp file URL ready for `ShareLink`.
+/// Builds CSV, JSON, and PDF exports and writes them to a temp file ready for the share sheet.
+/// Exports are generated on demand (when the user taps an export button), never during rendering.
 enum ExportService {
 
     // MARK: - CSV
 
-    static func csv(for entries: [WorkEntry]) -> String {
-        var lines = ["Job,Project,Date,Start Time,End Time,Duration Hours,Duration Text,Task Description"]
-
-        for entry in entries.sorted(by: { $0.date > $1.date }) {
-            let job = entry.project?.job?.name ?? ""
-            let project = entry.project?.name ?? ""
-            let date = DateDurationService.dateFormatter.string(from: entry.date)
-            let start = DateDurationService.timeFormatter.string(from: entry.startTime)
-            let end = DateDurationService.timeFormatter.string(from: entry.endTime)
-            let durationHours = String(format: "%.2f", entry.durationHours)
-            let durationText = DateDurationService.formattedDuration(hours: entry.durationHours)
-
-            let fields = [job, project, date, start, end, durationHours, durationText, entry.taskDescription]
-                .map(csvEscape)
-            lines.append(fields.joined(separator: ","))
-        }
-
-        return lines.joined(separator: "\n")
+    /// Spreadsheet apps in comma-decimal locales (e.g. German Excel) expect ";" between fields.
+    static func csvSeparator(for locale: Locale) -> String {
+        (locale.decimalSeparator ?? ".") == "," ? ";" : ","
     }
 
-    private static func csvEscape(_ field: String) -> String {
-        guard field.contains(",") || field.contains("\"") || field.contains("\n") else { return field }
+    /// A spreadsheet-friendly CSV: ISO dates (yyyy-MM-dd), 24-hour times, locale-aware
+    /// decimal hours and separator, CRLF line endings, and a UTF-8 BOM so Excel reads umlauts correctly.
+    static func csv(for entries: [WorkEntry], locale: Locale = .current) -> String {
+        let separator = csvSeparator(for: locale)
+        let header = ["Job", "Project", "Date", "Start", "End Date", "End", "Break (min)", "Hours", "Duration", "Task Description"]
+        var lines = [header.map { csvEscape($0, separator: separator) }.joined(separator: separator)]
+
+        for entry in entries.sorted(by: { $0.startTime < $1.startTime }) {
+            let fields = [
+                entry.project?.job?.name ?? "",
+                entry.project?.name ?? "",
+                DateDurationService.isoDateFormatter.string(from: entry.date),
+                DateDurationService.isoTimeFormatter.string(from: entry.startTime),
+                DateDurationService.isoDateFormatter.string(from: entry.endTime),
+                DateDurationService.isoTimeFormatter.string(from: entry.endTime),
+                String(entry.breakMinutes),
+                DateDurationService.formattedDecimalHours(entry.durationHours, locale: locale),
+                DateDurationService.formattedDuration(hours: entry.durationHours),
+                entry.taskDescription
+            ]
+            lines.append(fields.map { csvEscape($0, separator: separator) }.joined(separator: separator))
+        }
+
+        return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"
+    }
+
+    static func csvEscape(_ field: String, separator: String = ",") -> String {
+        let needsQuoting = field.contains(separator)
+            || field.contains("\"")
+            || field.contains("\n")
+            || field.contains("\r")
+        guard needsQuoting else { return field }
         return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 
@@ -37,9 +53,21 @@ enum ExportService {
         jobs.flatMap { $0.projects.flatMap(\.entries) }
     }
 
-    static func writeTempFile(data: Data, filename: String) -> URL? {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+    private static var exportDirectory: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
+    }
+
+    /// Writes `data` into the app's temp export folder and returns its URL.
+    /// Only the most recent export is kept, so temp files never pile up.
+    static func writeExportFile(data: Data, filename: String) -> URL? {
+        let fileManager = FileManager.default
+        let directory = exportDirectory
         do {
+            if fileManager.fileExists(atPath: directory.path) {
+                try? fileManager.removeItem(at: directory)
+            }
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appendingPathComponent(sanitizedFilename(filename))
             try data.write(to: url, options: .atomic)
             return url
         } catch {
@@ -47,58 +75,128 @@ enum ExportService {
         }
     }
 
+    static func sanitizedFilename(_ filename: String) -> String {
+        let cleaned = filename
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "\\", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "SignMe-Export" : cleaned
+    }
+
     /// Writes a fresh JSON backup of every job/project/entry and returns a shareable file URL.
     static func backupExportURL(jobs: [Job]) -> URL? {
         guard let data = try? BackupService.exportData(jobs: jobs) else { return nil }
-        return writeTempFile(data: data, filename: "SignMe-Backup-\(timestamp()).json")
+        return writeExportFile(data: data, filename: "SignMe-Backup-\(timestamp()).json")
     }
 
     /// Writes a CSV of the given entries and returns a shareable file URL.
     static func csvExportURL(entries: [WorkEntry], filenamePrefix: String = "SignMe-Export") -> URL? {
         let data = Data(csv(for: entries).utf8)
-        let safePrefix = filenamePrefix.replacingOccurrences(of: "/", with: "-")
-        return writeTempFile(data: data, filename: "\(safePrefix)-\(timestamp()).csv")
+        return writeExportFile(data: data, filename: "\(filenamePrefix)-\(timestamp()).csv")
     }
 
-    /// Renders a formatted PDF of one project's entries for a single month —
-    /// a title block, a table of entries, and the total tracked hours as the
-    /// last line of the document. Filename format: "ProjectName_Month_Year.pdf".
-    static func monthExportPDFURL(job: Job, project: Project, monthDate: Date, entries: [WorkEntry]) -> URL? {
-        let sortedEntries = entries.sorted { $0.date < $1.date }
+    // MARK: - PDF timesheet
+
+    /// Writes the monthly PDF timesheet and returns a shareable file URL.
+    /// Filename format: "ProjectName_Month_Year.pdf".
+    static func monthExportPDFURL(
+        job: Job,
+        project: Project,
+        monthDate: Date,
+        entries: [WorkEntry],
+        settings: TimesheetSettings = .current
+    ) -> URL? {
+        let data = monthExportPDFData(job: job, project: project, monthDate: monthDate, entries: entries, settings: settings)
+
+        let monthName = DateDurationService.monthNameFormatter.string(from: monthDate)
+        let year = Calendar.current.component(.year, from: monthDate)
+        let safeProject = project.name.replacingOccurrences(of: " ", with: "_")
+        return writeExportFile(data: data, filename: "\(safeProject)_\(monthName)_\(year).pdf")
+    }
+
+    /// Renders an A4 PDF of one project's entries for a single month: a header with
+    /// the signer's name, organization, job, project and month; a table of entries;
+    /// the total in both "h m" and decimal hours; signature lines for the employee and
+    /// (optionally) the supervisor; and "Page x of y" on every page.
+    static func monthExportPDFData(
+        job: Job,
+        project: Project,
+        monthDate: Date,
+        entries: [WorkEntry],
+        settings: TimesheetSettings = .current,
+        generatedAt: Date = .now
+    ) -> Data {
+        let sortedEntries = entries.sorted { $0.startTime < $1.startTime }
         let totalHours = entries.reduce(0) { $0 + $1.durationHours }
         let monthLabel = DateDurationService.monthYearFormatter.string(from: monthDate)
+        let titleText = settings.signerName.isEmpty ? "Timesheet" : settings.signerName
+        let subtitleText = "\(job.name) · \(project.name) · \(monthLabel)"
 
-        let pageWidth: CGFloat = 612   // US Letter, 72pt/inch
-        let pageHeight: CGFloat = 792
+        // A4 at 72 pt/inch.
+        let pageWidth: CGFloat = 595.2
+        let pageHeight: CGFloat = 841.8
         let margin: CGFloat = 40
+        let footerHeight: CGFloat = 20
         let contentWidth = pageWidth - margin * 2
-        let bottomLimit = pageHeight - margin
+        let contentBottom = pageHeight - margin - footerHeight
+        let rowSpacing: CGFloat = 6
+        let tableHeaderHeight: CGFloat = 24
+        let continuationHeaderHeight: CGFloat = 24
 
         let titleFont = UIFont.boldSystemFont(ofSize: 20)
         let subtitleFont = UIFont.systemFont(ofSize: 12)
         let headerFont = UIFont.boldSystemFont(ofSize: 10)
         let bodyFont = UIFont.systemFont(ofSize: 10)
+        let smallFont = UIFont.systemFont(ofSize: 9)
         let totalFont = UIFont.boldSystemFont(ofSize: 14)
 
         let columns: [(title: String, width: CGFloat)] = [
             ("Date", contentWidth * 0.16),
-            ("Start", contentWidth * 0.11),
-            ("End", contentWidth * 0.11),
-            ("Duration", contentWidth * 0.14),
-            ("Task Description", contentWidth * 0.48)
+            ("Start", contentWidth * 0.10),
+            ("End", contentWidth * 0.12),
+            ("Break", contentWidth * 0.09),
+            ("Hours", contentWidth * 0.09),
+            ("Task Description", contentWidth * 0.44)
         ]
+        let taskColumn = columns.count - 1
 
-        func drawDivider(at y: CGFloat) {
+        // Pre-compute row contents and heights. A single row is never taller than
+        // a full continuation page, so pagination always makes progress.
+        let maxRowHeight = contentBottom - (margin + continuationHeaderHeight + tableHeaderHeight)
+        let rows: [(values: [String], height: CGFloat)] = sortedEntries.map { entry -> (values: [String], height: CGFloat) in
+            var endText = DateDurationService.timeFormatter.string(from: entry.endTime)
+            if DateDurationService.spansMidnight(start: entry.startTime, end: entry.endTime) {
+                endText += " (+1)"
+            }
+            let values = [
+                DateDurationService.dateFormatter.string(from: entry.date),
+                DateDurationService.timeFormatter.string(from: entry.startTime),
+                endText,
+                entry.breakMinutes > 0 ? DateDurationService.formattedDuration(hours: Double(entry.breakMinutes) / 60) : "—",
+                DateDurationService.formattedDecimalHours(entry.durationHours),
+                entry.taskDescription
+            ]
+            let taskBounds = (entry.taskDescription as NSString).boundingRect(
+                with: CGSize(width: columns[taskColumn].width - 6, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: bodyFont],
+                context: nil
+            )
+            let height = min(max(16, ceil(taskBounds.height) + 4), maxRowHeight)
+            return (values, height)
+        }
+
+        func drawDivider(at y: CGFloat, alpha: CGFloat = 0.2) {
             let path = UIBezierPath()
             path.move(to: CGPoint(x: margin, y: y))
             path.addLine(to: CGPoint(x: pageWidth - margin, y: y))
-            UIColor.black.withAlphaComponent(0.2).setStroke()
+            UIColor.black.withAlphaComponent(alpha).setStroke()
             path.lineWidth = 0.5
             path.stroke()
         }
 
-        func drawTableHeader(startingAt y: CGFloat) -> CGFloat {
-            var y = y
+        func drawTableHeader(at y: CGFloat) -> CGFloat {
             var x = margin
             for column in columns {
                 (column.title as NSString).draw(
@@ -107,110 +205,150 @@ enum ExportService {
                 )
                 x += column.width
             }
-            y += 16
-            drawDivider(at: y)
-            return y + 8
+            drawDivider(at: y + 16)
+            return y + tableHeaderHeight
         }
 
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
-        let data = renderer.pdfData { context in
-            context.beginPage()
+        func drawFirstPageHeader() -> CGFloat {
             var y = margin
-
-            let signerName = "Eslam Sherif"
-            (signerName as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: [.font: titleFont])
+            (titleText as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: [.font: titleFont])
             y += 26
-
-            let subtitle = "\(project.name) · \(monthLabel)"
-            (subtitle as NSString).draw(
+            if !settings.organization.isEmpty {
+                (settings.organization as NSString).draw(
+                    at: CGPoint(x: margin, y: y),
+                    withAttributes: [.font: subtitleFont, .foregroundColor: UIColor.darkGray]
+                )
+                y += 18
+            }
+            (subtitleText as NSString).draw(
                 at: CGPoint(x: margin, y: y),
                 withAttributes: [.font: subtitleFont, .foregroundColor: UIColor.darkGray]
             )
             y += 20
             drawDivider(at: y)
-            y += 14
+            return y + 14
+        }
 
-            y = drawTableHeader(startingAt: y)
+        func drawContinuationHeader() -> CGFloat {
+            ("\(titleText) · \(subtitleText)" as NSString).draw(
+                in: CGRect(x: margin, y: margin, width: contentWidth, height: 14),
+                withAttributes: [.font: smallFont, .foregroundColor: UIColor.darkGray]
+            )
+            return margin + continuationHeaderHeight
+        }
 
-            for entry in sortedEntries {
-                let values = [
-                    DateDurationService.dateFormatter.string(from: entry.date),
-                    DateDurationService.timeFormatter.string(from: entry.startTime),
-                    DateDurationService.timeFormatter.string(from: entry.endTime),
-                    DateDurationService.formattedDuration(hours: entry.durationHours),
-                    entry.taskDescription
-                ]
-
-                let taskBounds = (values[4] as NSString).boundingRect(
-                    with: CGSize(width: columns[4].width - 6, height: .greatestFiniteMagnitude),
-                    options: [.usesLineFragmentOrigin],
-                    attributes: [.font: bodyFont],
-                    context: nil
-                )
-                let rowHeight = max(16, ceil(taskBounds.height) + 4)
-
-                if y + rowHeight > bottomLimit - 40 {
-                    context.beginPage()
-                    y = margin
-                    y = drawTableHeader(startingAt: y)
-                }
-
-                var x = margin
-                for (index, column) in columns.enumerated() {
-                    (values[index] as NSString).draw(
-                        in: CGRect(x: x, y: y, width: column.width - 6, height: rowHeight),
-                        withAttributes: [.font: bodyFont]
-                    )
-                    x += column.width
-                }
-                y += rowHeight + 6
-            }
-
-            if y + 40 > bottomLimit {
-                context.beginPage()
-                y = margin
-            } else {
-                y += 8
-                drawDivider(at: y)
-                y += 14
-            }
-
-            let totalText = "Total Hours: \(DateDurationService.formattedDuration(hours: totalHours))"
-            (totalText as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: [.font: totalFont])
-            y += 20
-
-            if y + 60 > bottomLimit {
-                context.beginPage()
-                y = margin
-            } else {
-                y += 40
-            }
-
-            let signatureLineY = y + 30
-            let signaturePath = UIBezierPath()
-            signaturePath.move(to: CGPoint(x: margin, y: signatureLineY))
-            signaturePath.addLine(to: CGPoint(x: margin + 220, y: signatureLineY))
-            UIColor.black.setStroke()
-            signaturePath.lineWidth = 0.75
-            signaturePath.stroke()
-
-            ("Signature" as NSString).draw(
-                at: CGPoint(x: margin, y: signatureLineY + 4),
-                withAttributes: [.font: subtitleFont, .foregroundColor: UIColor.darkGray]
+        func drawFooter(page: Int, totalPages: Int?) {
+            let y = pageHeight - margin
+            let attributes: [NSAttributedString.Key: Any] = [.font: smallFont, .foregroundColor: UIColor.gray]
+            ("Generated \(DateDurationService.dateFormatter.string(from: generatedAt))" as NSString).draw(
+                in: CGRect(x: margin, y: y, width: contentWidth / 2, height: 12),
+                withAttributes: attributes
+            )
+            let pageText = totalPages.map { "Page \(page) of \($0)" } ?? "Page \(page)"
+            let rightAligned = NSMutableParagraphStyle()
+            rightAligned.alignment = .right
+            var rightAttributes = attributes
+            rightAttributes[.paragraphStyle] = rightAligned
+            (pageText as NSString).draw(
+                in: CGRect(x: margin + contentWidth / 2, y: y, width: contentWidth / 2, height: 12),
+                withAttributes: rightAttributes
             )
         }
 
-        let monthName = DateDurationService.monthNameFormatter.string(from: monthDate)
-        let year = Calendar.current.component(.year, from: monthDate)
-        let safeProject = project.name
-            .replacingOccurrences(of: "/", with: "-")
-            .replacingOccurrences(of: " ", with: "_")
-        let filename = "\(safeProject)_\(monthName)_\(year).pdf"
+        func drawSignatureLine(x: CGFloat, y: CGFloat, width: CGFloat, label: String) {
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: x, y: y))
+            path.addLine(to: CGPoint(x: x + width, y: y))
+            UIColor.black.setStroke()
+            path.lineWidth = 0.75
+            path.stroke()
+            (label as NSString).draw(
+                in: CGRect(x: x, y: y + 4, width: width, height: 14),
+                withAttributes: [.font: smallFont, .foregroundColor: UIColor.darkGray]
+            )
+        }
 
-        return writeTempFile(data: data, filename: filename)
+        /// Draws the whole document. Rendered twice: once to count pages, then
+        /// again with the known total for the "Page x of y" footers.
+        func render(totalPages: Int?) -> (data: Data, pageCount: Int) {
+            var pageCount = 0
+            let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
+            let data = renderer.pdfData { context in
+                func startPage(isFirst: Bool) -> CGFloat {
+                    context.beginPage()
+                    pageCount += 1
+                    drawFooter(page: pageCount, totalPages: totalPages)
+                    return isFirst ? drawFirstPageHeader() : drawContinuationHeader()
+                }
+
+                var y = startPage(isFirst: true)
+                y = drawTableHeader(at: y)
+
+                for row in rows {
+                    if y + row.height > contentBottom {
+                        y = startPage(isFirst: false)
+                        y = drawTableHeader(at: y)
+                    }
+                    var x = margin
+                    for (index, column) in columns.enumerated() {
+                        (row.values[index] as NSString).draw(
+                            in: CGRect(x: x, y: y, width: column.width - 6, height: row.height),
+                            withAttributes: [.font: bodyFont]
+                        )
+                        x += column.width
+                    }
+                    y += row.height + rowSpacing
+                }
+
+                // Total
+                let totalBlockHeight: CGFloat = 44
+                if y + totalBlockHeight > contentBottom {
+                    y = startPage(isFirst: false)
+                }
+                y += 4
+                drawDivider(at: y)
+                y += 12
+                let totalText = "Total: \(DateDurationService.formattedDuration(hours: totalHours)) (\(DateDurationService.formattedDecimalHours(totalHours)) h)"
+                (totalText as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: [.font: totalFont])
+                y += 24
+
+                // Signatures
+                let signatureBlockHeight: CGFloat = 80
+                if y + signatureBlockHeight > contentBottom {
+                    y = startPage(isFirst: false)
+                }
+                let signatureY = y + 56
+                let signatureWidth = (contentWidth - 30) / 2
+                let employeeLabel = settings.signerName.isEmpty
+                    ? "Date, signature (employee)"
+                    : "Date, signature — \(settings.signerName)"
+                drawSignatureLine(x: margin, y: signatureY, width: signatureWidth, label: employeeLabel)
+                if settings.includeSupervisorSignature {
+                    drawSignatureLine(
+                        x: margin + signatureWidth + 30,
+                        y: signatureY,
+                        width: signatureWidth,
+                        label: "Date, signature (supervisor)"
+                    )
+                }
+            }
+            return (data, pageCount)
+        }
+
+        let layoutPass = render(totalPages: nil)
+        return render(totalPages: layoutPass.pageCount).data
     }
 
-    private static func timestamp() -> Int {
-        Int(Date().timeIntervalSince1970)
+    // MARK: - Helpers
+
+    private static let timestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HHmm"
+        return formatter
+    }()
+
+    private static func timestamp(_ date: Date = .now) -> String {
+        timestampFormatter.string(from: date)
     }
 }

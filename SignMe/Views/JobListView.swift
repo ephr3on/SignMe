@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 /// The Jobs tab: search, add, rename, delete jobs, and backup export/import.
 struct JobListView: View {
@@ -14,8 +13,7 @@ struct JobListView: View {
     @State private var showDeleteConfirm = false
 
     @State private var showingImporter = false
-    @State private var importSummaryMessage: String?
-    @State private var importErrorMessage: String?
+    @State private var shareItem: ShareItem?
 
     @State private var selectedJob: Job?
 
@@ -79,8 +77,10 @@ struct JobListView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { showingAddJob = true } label: { Label("Add Job", systemImage: "plus") }
-                    if let backupURL = ExportService.backupExportURL(jobs: allJobs) {
-                        ShareLink(item: backupURL) { Label("Export Backup", systemImage: "square.and.arrow.up") }
+                    Button {
+                        shareItem = ShareItem(ExportService.backupExportURL(jobs: allJobs))
+                    } label: {
+                        Label("Export Backup", systemImage: "square.and.arrow.up")
                     }
                     Button { showingImporter = true } label: { Label("Import Backup", systemImage: "square.and.arrow.down") }
                 } label: {
@@ -92,13 +92,18 @@ struct JobListView: View {
             }
         }
         .sheet(isPresented: $showingAddJob) {
-            NameEntrySheet(title: "New Job", fieldLabel: "Job Name") { name in
+            NameEntrySheet(title: "New Job", fieldLabel: "Job Name", existingNames: allJobs.map(\.name)) { name in
                 let job = Job(name: name)
                 modelContext.insert(job)
             }
         }
         .sheet(item: $jobToRename) { job in
-            NameEntrySheet(title: "Rename Job", fieldLabel: "Job Name", initialValue: job.name) { newName in
+            NameEntrySheet(
+                title: "Rename Job",
+                fieldLabel: "Job Name",
+                initialValue: job.name,
+                existingNames: allJobs.filter { $0.id != job.id }.map(\.name)
+            ) { newName in
                 job.name = newName
             }
         }
@@ -112,44 +117,8 @@ struct JobListView: View {
         } message: { job in
             Text("This will permanently delete \"\(job.name)\" and all of its projects and entries.")
         }
-        .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.json], onCompletion: handleImport)
-        .alert("Import Complete", isPresented: Binding(
-            get: { importSummaryMessage != nil },
-            set: { if !$0 { importSummaryMessage = nil } }
-        )) {
-            Button("OK") {}
-        } message: {
-            Text(importSummaryMessage ?? "")
-        }
-        .alert("Import Failed", isPresented: Binding(
-            get: { importErrorMessage != nil },
-            set: { if !$0 { importErrorMessage = nil } }
-        )) {
-            Button("OK") {}
-        } message: {
-            Text(importErrorMessage ?? "")
-        }
-    }
-
-    private func handleImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            let didAccess = url.startAccessingSecurityScopedResource()
-            defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let data = try Data(contentsOf: url)
-                let summary = try BackupService.importData(data, into: modelContext, existingJobs: allJobs)
-                if summary.isEmpty {
-                    importSummaryMessage = "Nothing new to import — your data is already up to date."
-                } else {
-                    importSummaryMessage = "Added \(summary.newJobs) job(s), \(summary.newProjects) project(s), and \(summary.newEntries) entr\(summary.newEntries == 1 ? "y" : "ies"). Skipped \(summary.skippedDuplicates) duplicate(s)."
-                }
-            } catch {
-                importErrorMessage = error.localizedDescription
-            }
-        case .failure(let error):
-            importErrorMessage = error.localizedDescription
-        }
+        .backupImporter(isPresented: $showingImporter, existingJobs: allJobs)
+        .shareSheet(item: $shareItem)
     }
 }
 

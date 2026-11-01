@@ -11,10 +11,29 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.signme.verify.SignMe
+        # Swift 5 language mode. Moving to 6 (strict concurrency) is a separate migration.
         SWIFT_VERSION: 5.0
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
+    scheme:
+      testTargets:
+        - SignMeTests
+
+  SignMeTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SignMeTests
+    dependencies:
+      - target: SignMe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.signme.verify.SignMeTests
+        SWIFT_VERSION: 5.0
+        GENERATE_INFOPLIST_FILE: YES

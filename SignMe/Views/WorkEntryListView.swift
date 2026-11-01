@@ -38,6 +38,8 @@ struct WorkEntryListView: View {
     @State private var showingCopyPicker = false
     @State private var showingExportRange = false
     @State private var moveBlockedMessage: String?
+    @State private var shareItem: ShareItem?
+    @State private var didApplyInitialExpansion = false
 
     var body: some View {
         Group {
@@ -62,6 +64,15 @@ struct WorkEntryListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: selectionMode)
+        .onAppear(perform: applyInitialExpansion)
+        .onChange(of: project.entries.count) { oldCount, newCount in
+            applyInitialExpansion()
+            // Make sure a newly added/copied/moved-in entry isn't hidden in a collapsed month.
+            if newCount > oldCount, let newest = project.entries.max(by: { $0.updatedAt < $1.updatedAt }) {
+                reveal(newest)
+            }
+        }
+        .shareSheet(item: $shareItem)
         .sheet(isPresented: $showingAddEntry) {
             EntryFormView(project: project)
         }
@@ -98,7 +109,11 @@ struct WorkEntryListView: View {
         ) {
             Button("Delete \(selectedEntryIDs.count) Entries", role: .destructive) { deleteSelectedEntries() }
         } message: {
-            Text("This can't be undone.")
+            if hiddenSelectedCount > 0 {
+                Text("\(hiddenSelectedCount) of them \(hiddenSelectedCount == 1 ? "is" : "are") in collapsed months. This can't be undone.")
+            } else {
+                Text("This can't be undone.")
+            }
         }
         .alert("Can't Move or Copy", isPresented: Binding(
             get: { moveBlockedMessage != nil },
@@ -255,11 +270,12 @@ struct WorkEntryListView: View {
                     Button { showingExportRange = true } label: {
                         Label("Export Date Range…", systemImage: "calendar.badge.clock")
                     }
-                    if let allURL = ExportService.csvExportURL(entries: project.entries, filenamePrefix: project.name) {
-                        ShareLink(item: allURL) {
-                            Label("Export All (CSV)", systemImage: "square.and.arrow.up")
-                        }
+                    Button {
+                        shareItem = ShareItem(ExportService.csvExportURL(entries: project.entries, filenamePrefix: project.name))
+                    } label: {
+                        Label("Export All (CSV)", systemImage: "square.and.arrow.up")
                     }
+                    .disabled(project.entries.isEmpty)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -287,13 +303,16 @@ struct WorkEntryListView: View {
                     showingMovePicker = true
                 }
                 Spacer()
-                exportButton
+                actionBarButton("Export", "square.and.arrow.up", disabled: selectedEntryIDs.isEmpty) {
+                    exportSelectedEntries()
+                }
             }
             Divider()
             HStack {
-                Button(selectedEntryIDs.count == project.entries.count ? "Deselect All" : "Select All") {
+                Button(allVisibleSelected ? "Deselect All" : "Select All") {
                     toggleSelectAll()
                 }
+                .disabled(visibleEntries.isEmpty)
                 .font(.subheadline.weight(.semibold))
                 Spacer()
                 Button("Cancel") { exitSelectionMode() }
@@ -304,25 +323,6 @@ struct WorkEntryListView: View {
         .padding(.top, 12)
         .padding(.bottom, 8)
         .background(.bar)
-    }
-
-    private var exportButton: some View {
-        Group {
-            if let url = selectedExportURL {
-                ShareLink(item: url) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Export").font(.caption2)
-                    }
-                }
-            } else {
-                VStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("Export").font(.caption2)
-                }
-                .foregroundStyle(.tertiary)
-            }
-        }
     }
 
     private func actionBarButton(_ title: String, _ icon: String, disabled: Bool, tint: Color = .accentColor, action: @escaping () -> Void) -> some View {
@@ -355,8 +355,27 @@ struct WorkEntryListView: View {
         }
     }
 
-    // Sections start collapsed: a year/month is only expanded once its id has
-    // been explicitly opened by the user.
+    // A year/month is expanded only while its id is in the expanded set. On first
+    // appearance the most recent year and month are opened so entries are visible
+    // right away; everything older starts collapsed.
+    private func applyInitialExpansion() {
+        guard !didApplyInitialExpansion, let latestYear = groupedByYear.first else { return }
+        didApplyInitialExpansion = true
+        expandedYearIDs.insert(latestYear.id)
+        if let latestMonth = latestYear.months.first {
+            expandedMonthIDs.insert(latestMonth.id)
+        }
+    }
+
+    /// Expands the year and month that contain `entry`. Ids match `groupedByYear`.
+    private func reveal(_ entry: WorkEntry) {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: entry.date)
+        let month = calendar.component(.month, from: entry.date)
+        expandedYearIDs.insert("\(year)")
+        expandedMonthIDs.insert("\(year)-\(month)")
+    }
+
     private func isYearExpanded(_ id: String) -> Bool { expandedYearIDs.contains(id) }
     private func isMonthExpanded(_ id: String) -> Bool { expandedMonthIDs.contains(id) }
 
@@ -378,11 +397,34 @@ struct WorkEntryListView: View {
         }
     }
 
+    /// Entries currently on screen — i.e. inside an expanded year *and* month.
+    private var visibleEntries: [WorkEntry] {
+        groupedByYear
+            .filter { isYearExpanded($0.id) }
+            .flatMap(\.months)
+            .filter { isMonthExpanded($0.id) }
+            .flatMap(\.entries)
+    }
+
+    private var allVisibleSelected: Bool {
+        let visible = visibleEntries
+        return !visible.isEmpty && visible.allSatisfy { selectedEntryIDs.contains($0.id) }
+    }
+
+    /// Selected entries the user can't currently see (their month is collapsed).
+    private var hiddenSelectedCount: Int {
+        let visibleIDs = Set(visibleEntries.map(\.id))
+        return selectedEntryIDs.subtracting(visibleIDs).count
+    }
+
+    /// Select All / Deselect All only affects entries that are visible, so a bulk
+    /// action never silently includes entries hidden in collapsed months.
     private func toggleSelectAll() {
-        if selectedEntryIDs.count == project.entries.count {
-            selectedEntryIDs.removeAll()
+        let visibleIDs = Set(visibleEntries.map(\.id))
+        if allVisibleSelected {
+            selectedEntryIDs.subtract(visibleIDs)
         } else {
-            selectedEntryIDs = Set(project.entries.map(\.id))
+            selectedEntryIDs.formUnion(visibleIDs)
         }
     }
 
@@ -395,9 +437,10 @@ struct WorkEntryListView: View {
         project.entries.filter { selectedEntryIDs.contains($0.id) }
     }
 
-    private var selectedExportURL: URL? {
-        guard !selectedEntries.isEmpty else { return nil }
-        return ExportService.csvExportURL(entries: selectedEntries, filenamePrefix: "\(project.name)-Selected")
+    private func exportSelectedEntries() {
+        let entries = selectedEntries
+        guard !entries.isEmpty else { return }
+        shareItem = ShareItem(ExportService.csvExportURL(entries: entries, filenamePrefix: "\(project.name)-Selected"))
     }
 
     // MARK: - Mutations
@@ -428,9 +471,8 @@ struct WorkEntryListView: View {
             if let idx = project.entries.firstIndex(where: { $0.id == entry.id }) {
                 project.entries.remove(at: idx)
             }
-            entry.project = destination
             entry.updatedAt = .now
-            destination.entries.append(entry)
+            destination.entries.append(entry)  // SwiftData updates entry.project via the inverse
         }
         exitSelectionMode()
     }
@@ -441,13 +483,7 @@ struct WorkEntryListView: View {
             return
         }
         for entry in selectedEntries {
-            let copy = WorkEntry(
-                date: entry.date,
-                startTime: entry.startTime,
-                endTime: entry.endTime,
-                taskDescription: entry.taskDescription,
-                project: destination
-            )
+            let copy = entry.duplicate()
             modelContext.insert(copy)
             destination.entries.append(copy)
         }
@@ -462,6 +498,7 @@ private struct ExportRangeSheet: View {
 
     @State private var startDate: Date
     @State private var endDate: Date
+    @State private var shareItem: ShareItem?
 
     init(project: Project) {
         self.project = project
@@ -477,8 +514,10 @@ private struct ExportRangeSheet: View {
         return project.entries.filter { $0.date >= start && $0.date < end }
     }
 
-    private var exportURL: URL? {
-        ExportService.csvExportURL(entries: filteredEntries, filenamePrefix: "\(project.name)-Range")
+    private func exportCSV() {
+        let entries = filteredEntries
+        guard !entries.isEmpty else { return }
+        shareItem = ShareItem(ExportService.csvExportURL(entries: entries, filenamePrefix: "\(project.name)-Range"))
     }
 
     var body: some View {
@@ -496,8 +535,8 @@ private struct ExportRangeSheet: View {
                     }
                 }
                 Section {
-                    if let exportURL, !filteredEntries.isEmpty {
-                        ShareLink(item: exportURL) {
+                    if !filteredEntries.isEmpty {
+                        Button(action: exportCSV) {
                             Label("Export CSV", systemImage: "square.and.arrow.up")
                         }
                     } else {
@@ -508,6 +547,7 @@ private struct ExportRangeSheet: View {
             }
             .navigationTitle("Export Range")
             .navigationBarTitleDisplayMode(.inline)
+            .shareSheet(item: $shareItem)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
