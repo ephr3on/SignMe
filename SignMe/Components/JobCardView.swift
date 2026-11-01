@@ -8,9 +8,9 @@ struct JobCardView: View {
         HStack(spacing: 14) {
             Image(systemName: "briefcase.fill")
                 .font(.title3)
-                .foregroundStyle(Theme.background)
+                .foregroundStyle(Theme.onGold)
                 .frame(width: 44, height: 44)
-                .background(Theme.gold, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Theme.goldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(job.name)

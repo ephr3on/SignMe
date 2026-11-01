@@ -13,6 +13,8 @@ enum AppSettings {
         static let lastProjectID = "entry.lastProjectID"
         /// Signature used automatically on export; empty = ask every time.
         static let defaultSignatureID = "signature.defaultID"
+        /// `AppTheme` raw value: "light" (default), "dark" or "system".
+        static let theme = "appearance.theme"
     }
 
     enum Defaults {
@@ -22,6 +24,7 @@ enum AppSettings {
         static let monthlyTargetHours = 0.0
         static let lastProjectID = ""
         static let defaultSignatureID = ""
+        static let theme = AppTheme.light.rawValue
     }
 }
 

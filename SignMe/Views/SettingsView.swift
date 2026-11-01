@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.includeSupervisorSignature) private var includeSupervisorSignature = AppSettings.Defaults.includeSupervisorSignature
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
     @AppStorage(AppSettings.Keys.defaultSignatureID) private var defaultSignatureID = AppSettings.Defaults.defaultSignatureID
+    @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
 
     @State private var showingImporter = false
     @State private var showingResetConfirm = false
@@ -28,6 +29,21 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            Section {
+                Picker("Theme", selection: $themeRawValue) {
+                    ForEach(AppTheme.allCases) { theme in
+                        Text(theme.title).tag(theme.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text("Light is easier on the eyes in daylight; Dark suits evenings. System follows your iPhone's setting.")
+            }
+            .themedRow()
+
             Section {
                 TextField("Your name", text: $signerName)
                     .textContentType(.name)

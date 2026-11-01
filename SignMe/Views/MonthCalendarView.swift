@@ -127,11 +127,11 @@ struct MonthCalendarView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .monospacedDigit()
             }
-            .foregroundStyle(isSelected ? Theme.background : (hours > 0 ? Theme.textPrimary : Theme.textTertiary))
+            .foregroundStyle(isSelected ? Theme.onGold : (hours > 0 ? Theme.textPrimary : Theme.textTertiary))
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? Theme.gold : (hours > 0 ? Theme.gold.opacity(intensity) : Color(hex: 0x101D33)))
+                    .fill(isSelected ? Theme.goldFill : (hours > 0 ? Theme.goldFill.opacity(intensity) : Theme.dayEmpty))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

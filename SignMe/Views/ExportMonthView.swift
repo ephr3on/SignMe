@@ -271,7 +271,7 @@ struct ExportMonthSheet: View {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title3)
-                        .foregroundStyle(Theme.background, Theme.gold)
+                        .foregroundStyle(Theme.onGold, Theme.goldFill)
                         .padding(6)
                 }
             }

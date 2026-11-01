@@ -84,9 +84,9 @@ struct AppTabBar: View {
         Button(action: onAdd) {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(Theme.background)
+                .foregroundStyle(Theme.onGold)
                 .frame(width: 58, height: 58)
-                .background(Circle().fill(Theme.gold))
+                .background(Circle().fill(Theme.goldFill))
                 .overlay(Circle().strokeBorder(Theme.background, lineWidth: 4))
                 .offset(y: -20)
         }

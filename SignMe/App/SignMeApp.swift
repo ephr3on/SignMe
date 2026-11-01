@@ -14,16 +14,19 @@ struct SignMeApp: App {
     }()
 
     @State private var timerStore = TimerStore()
+    @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
 
     init() {
         Theme.configureAppearance()
     }
 
+    private var theme: AppTheme { AppTheme(rawValue: themeRawValue) ?? .light }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(timerStore)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(theme.colorScheme)
                 .tint(Theme.gold)
         }
         .modelContainer(modelContainer)

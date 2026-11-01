@@ -216,9 +216,9 @@ struct EntryFormView: View {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.background)
+                    .foregroundStyle(Theme.onGold)
                     .frame(width: 38, height: 38)
-                    .background(Theme.gold, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Theme.goldFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(selectedProject?.name ?? "Choose a project")
                         .font(.body.weight(.semibold))

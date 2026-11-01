@@ -395,7 +395,7 @@ struct DashboardView: View {
                     x: .value("Day", day.label),
                     y: .value("Hours", day.hours)
                 )
-                .foregroundStyle(day.isToday ? Theme.gold : Theme.bar)
+                .foregroundStyle(day.isToday ? Theme.goldFill : Theme.bar)
                 .cornerRadius(6)
             }
             .chartYAxis(.hidden)
