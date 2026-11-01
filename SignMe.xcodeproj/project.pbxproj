@@ -15,10 +15,13 @@
 		3D02A745BF97DED275FAA54E /* WorkEntryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43B8DDBC2BBEA4B699D49F0 /* WorkEntryListView.swift */; };
 		44DBFDEEF21CFAD96C813C5C /* SignMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705750FA00D5D56A066817B /* SignMeApp.swift */; };
 		524BF5FB64FD3A9A250F5232 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D99162304D7B038A09099 /* PreviewSupport.swift */; };
+		0D4B62633A24B006A182C81E /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F5310E462D0397476E811E /* AppSettings.swift */; };
 		5306540C4DC29AF689D574F8 /* NameEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A9D2E584FDB6607485EC7 /* NameEntrySheet.swift */; };
 		548038E328D128ACA2DD7407 /* DateDurationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0F31F5EC5EDD7AFA7B31FD /* DateDurationService.swift */; };
 		64A158763250FC4E3CBA633C /* JobListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C19086B20AE93C24A31AA96 /* JobListView.swift */; };
 		74F364AD5810E3CD84576F08 /* EntryRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1885DBEB7313317CF4CAFEF6 /* EntryRowView.swift */; };
+		72114D58006F92942CE68933 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653FC790BCB33C7E3DB93198 /* ShareSheet.swift */; };
+		BF94353EDCBC7BDF127C1055 /* BackupImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DAA0F5A150F47B3477E58 /* BackupImporter.swift */; };
 		89CBB891BF98EE8092F7B69A /* EntryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41F7BD98D5074FFA349AE08 /* EntryFormView.swift */; };
 		8DC967EF1D21917832C06C8E /* Job.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0208217CDD1F264458CC2936 /* Job.swift */; };
 		A14BCCB21F8C07E46E55EEA2 /* ProjectCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F9F40D8CE480D9503E6D89B /* ProjectCardView.swift */; };
@@ -38,6 +41,8 @@
 		0208217CDD1F264458CC2936 /* Job.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Job.swift; sourceTree = "<group>"; };
 		16DE6213812DB07A9D8C4E94 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		1885DBEB7313317CF4CAFEF6 /* EntryRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryRowView.swift; sourceTree = "<group>"; };
+		653FC790BCB33C7E3DB93198 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		E22DAA0F5A150F47B3477E58 /* BackupImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupImporter.swift; sourceTree = "<group>"; };
 		1B0F31F5EC5EDD7AFA7B31FD /* DateDurationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateDurationService.swift; sourceTree = "<group>"; };
 		215F07FCA787E3C3D5B46D36 /* SearchWorkEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWorkEntryView.swift; sourceTree = "<group>"; };
 		2705750FA00D5D56A066817B /* SignMeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignMeApp.swift; sourceTree = "<group>"; };
@@ -45,6 +50,7 @@
 		421C4B2B8EAC0C90801E0AE8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		421EC1259296F12DD841422B /* WorkEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkEntry.swift; sourceTree = "<group>"; };
 		484D99162304D7B038A09099 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
+		32F5310E462D0397476E811E /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		5EF109843F3D7D055E92BC25 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		5F9F40D8CE480D9503E6D89B /* ProjectCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCardView.swift; sourceTree = "<group>"; };
@@ -104,6 +110,8 @@
 			children = (
 				70078435947D47B64E370F44 /* EmptyStateView.swift */,
 				1885DBEB7313317CF4CAFEF6 /* EntryRowView.swift */,
+				653FC790BCB33C7E3DB93198 /* ShareSheet.swift */,
+				E22DAA0F5A150F47B3477E58 /* BackupImporter.swift */,
 				7F7507094C795AB3D6A5671D /* JobCardView.swift */,
 				CC4A9D2E584FDB6607485EC7 /* NameEntrySheet.swift */,
 				16DE6213812DB07A9D8C4E94 /* PrimaryButton.swift */,
@@ -127,6 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				484D99162304D7B038A09099 /* PreviewSupport.swift */,
+				32F5310E462D0397476E811E /* AppSettings.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -229,12 +238,15 @@
 				36CA8D02D8A6D4DEE11CDF4D /* EmptyStateView.swift in Sources */,
 				89CBB891BF98EE8092F7B69A /* EntryFormView.swift in Sources */,
 				74F364AD5810E3CD84576F08 /* EntryRowView.swift in Sources */,
+				72114D58006F92942CE68933 /* ShareSheet.swift in Sources */,
+				BF94353EDCBC7BDF127C1055 /* BackupImporter.swift in Sources */,
 				018D9564E1B43623E9F8BA9B /* ExportService.swift in Sources */,
 				8DC967EF1D21917832C06C8E /* Job.swift in Sources */,
 				F4DCC7F21CD117061C1C833C /* JobCardView.swift in Sources */,
 				64A158763250FC4E3CBA633C /* JobListView.swift in Sources */,
 				5306540C4DC29AF689D574F8 /* NameEntrySheet.swift in Sources */,
 				524BF5FB64FD3A9A250F5232 /* PreviewSupport.swift in Sources */,
+				0D4B62633A24B006A182C81E /* AppSettings.swift in Sources */,
 				D03A615D693C499EE60FEFAB /* PrimaryButton.swift in Sources */,
 				B6D734C2E5C3CC0BD79BA7F1 /* Project.swift in Sources */,
 				A14BCCB21F8C07E46E55EEA2 /* ProjectCardView.swift in Sources */,
@@ -310,6 +322,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D9K5CU789M;
@@ -332,6 +345,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D9K5CU789M;

@@ -11,6 +11,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.signme.verify.SignMe
+        DEVELOPMENT_TEAM: D9K5CU789M
+        CODE_SIGN_IDENTITY: iPhone Developer
         # Swift 5 language mode. Moving to 6 (strict concurrency) is a separate migration.
         SWIFT_VERSION: 5.0
         TARGETED_DEVICE_FAMILY: "1"
@@ -35,5 +37,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.signme.verify.SignMeTests
+        DEVELOPMENT_TEAM: D9K5CU789M
         SWIFT_VERSION: 5.0
         GENERATE_INFOPLIST_FILE: YES
