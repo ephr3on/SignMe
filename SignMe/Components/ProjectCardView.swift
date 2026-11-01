@@ -8,23 +8,23 @@ struct ProjectCardView: View {
         HStack(spacing: 14) {
             Image(systemName: "folder.fill")
                 .font(.title3)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.gold)
                 .frame(width: 44, height: 44)
-                .background(Color.orange.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(project.name)
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
 
                 Text("\(project.entries.count) entr\(project.entries.count == 1 ? "y" : "ies") · \(DateDurationService.formattedDuration(hours: project.totalHours))")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
 
                 if let last = project.lastEntryDate {
                     Text("Last entry \(DateDurationService.dateFormatter.string(from: last))")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textTertiary)
                 }
             }
 
@@ -32,20 +32,15 @@ struct ProjectCardView: View {
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Theme.textTertiary)
         }
-        .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
+        .card(padding: 16, radius: 20)
     }
 }
 
 #Preview {
     ProjectCardView(project: PreviewSupport.sampleProject)
         .padding()
+        .background(Theme.background)
         .modelContainer(PreviewSupport.container)
 }

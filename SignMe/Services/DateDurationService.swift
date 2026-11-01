@@ -97,6 +97,13 @@ enum DateDurationService {
         return formatter
     }()
 
+    /// Numeric date written next to a signature, e.g. "30.10.2026" (German) or "10/30/2026" (US).
+    static let signatureDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("ddMMyyyy")
+        return formatter
+    }()
+
     /// Machine-readable date for CSV files and filenames, e.g. "2026-11-01".
     static let isoDateFormatter: DateFormatter = {
         let formatter = DateFormatter()

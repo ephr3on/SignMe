@@ -77,6 +77,7 @@ struct ProjectListView: View {
                 .listStyle(.plain)
             }
         }
+        .themedScreen()
         .navigationTitle(job.name)
         .navigationDestination(item: $selectedProject) { project in
             WorkEntryListView(project: project)
@@ -84,6 +85,7 @@ struct ProjectListView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAddProject = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add project")
             }
         }
         .sheet(isPresented: $showingAddProject) {

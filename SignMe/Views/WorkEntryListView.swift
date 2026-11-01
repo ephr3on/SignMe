@@ -13,13 +13,31 @@ private struct YearGroup: Identifiable {
     let months: [MonthGroup]
 }
 
-/// Shows every WorkEntry inside a Project, grouped by year then month
-/// (newest first), with add/edit/delete, multi-select batch actions, and export.
+/// Drives the "add entry on this day" sheet from the calendar.
+private struct AddEntryDate: Identifiable {
+    let id = UUID()
+    let date: Date
+}
+
+/// Shows every WorkEntry inside a Project — as a list grouped by year then month
+/// (newest first) or as a month calendar — with add/edit/delete, multi-select
+/// batch actions, and export.
 struct WorkEntryListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var allJobs: [Job]
+    @Query(sort: \Job.createdAt) private var allJobs: [Job]
 
     let project: Project
+
+    private enum ViewMode: String, CaseIterable {
+        case list = "List"
+        case calendar = "Calendar"
+    }
+
+    @State private var viewMode: ViewMode = .list
+    @State private var calendarMonth: Date = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+    @State private var calendarSelectedDay: Date = .now
+    @State private var addEntryDate: AddEntryDate?
+    @State private var showingExportMonth = false
 
     @State private var selectionMode = false
     @State private var selectedEntryIDs: Set<UUID> = []
@@ -42,18 +60,39 @@ struct WorkEntryListView: View {
     @State private var didApplyInitialExpansion = false
 
     var body: some View {
-        Group {
-            if project.entries.isEmpty {
+        VStack(spacing: 0) {
+            if !selectionMode {
+                Picker("View", selection: $viewMode) {
+                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+
+            if viewMode == .calendar && !selectionMode {
+                MonthCalendarView(
+                    project: project,
+                    month: $calendarMonth,
+                    selectedDay: $calendarSelectedDay,
+                    onAdd: { day in addEntryDate = AddEntryDate(date: day) },
+                    onEdit: { entry in entryToEdit = entry }
+                )
+            } else if project.entries.isEmpty {
                 EmptyStateView(
                     icon: "clock.badge.questionmark",
                     title: "No entries yet",
                     message: "Log your first work entry for \(project.name).",
                     actionTitle: "Add Entry"
                 ) { showingAddEntry = true }
+                Spacer(minLength: 0)
             } else {
                 entryList
             }
         }
+        .themedScreen()
         .navigationTitle(selectionMode ? "\(selectedEntryIDs.count) Selected" : project.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
@@ -78,6 +117,12 @@ struct WorkEntryListView: View {
         }
         .sheet(item: $entryToEdit) { entry in
             EntryFormView(project: project, entryToEdit: entry)
+        }
+        .sheet(item: $addEntryDate) { item in
+            EntryFormView(project: project, initialDate: item.date)
+        }
+        .sheet(isPresented: $showingExportMonth) {
+            ExportMonthSheet(jobs: allJobs, initialProject: project, initialMonth: calendarMonth)
         }
         .sheet(isPresented: $showingMovePicker) {
             DestinationPickerView(mode: .project, jobs: allJobs, excludingProject: project, onSelectProject: { destination in
@@ -149,7 +194,6 @@ struct WorkEntryListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
     }
 
     private func entryRow(_ entry: WorkEntry) -> some View {
@@ -163,12 +207,11 @@ struct WorkEntryListView: View {
         } label: {
             EntryRowView(entry: entry, isSelected: isSelected, selectionMode: selectionMode)
                 .padding(12)
-                .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.06), lineWidth: isSelected ? 1.5 : 1)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(isSelected ? Theme.gold : Color.clear, lineWidth: 1.5)
                 )
-                .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
         .listRowSeparator(.hidden)
@@ -204,14 +247,15 @@ struct WorkEntryListView: View {
             HStack(spacing: 10) {
                 Image(systemName: isYearExpanded(group.id) ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Theme.gold)
                 Text(String(group.year))
-                    .font(.title3.bold())
-                    .foregroundStyle(.primary)
+                    .font(Theme.display(.title3))
+                    .foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(DateDurationService.formattedDuration(hours: yearHours))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 4)
@@ -228,22 +272,23 @@ struct WorkEntryListView: View {
             HStack(spacing: 10) {
                 Image(systemName: isMonthExpanded(group.id) ? "chevron.down" : "chevron.right")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Theme.gold)
                     .frame(width: 14)
                 Text(DateDurationService.monthYearFormatter.string(from: group.month))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text("\(group.entries.count) \(group.entries.count == 1 ? "entry" : "entries")")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                 Text(DateDurationService.formattedDuration(hours: group.entries.reduce(0) { $0 + $1.durationHours }))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Theme.gold)
+                    .monospacedDigit()
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
-            .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Theme.gold.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -279,9 +324,15 @@ struct WorkEntryListView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("More")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingExportMonth = true } label: { Image(systemName: "signature") }
+                    .accessibilityLabel("Export signed month")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAddEntry = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add entry")
             }
         }
     }
@@ -291,7 +342,7 @@ struct WorkEntryListView: View {
     private var selectionActionBar: some View {
         VStack(spacing: 10) {
             HStack {
-                actionBarButton("Delete", "trash", disabled: selectedEntryIDs.isEmpty, tint: .red) {
+                actionBarButton("Delete", "trash", disabled: selectedEntryIDs.isEmpty, tint: Theme.danger) {
                     showDeleteSelectedConfirm = true
                 }
                 Spacer()
@@ -322,17 +373,19 @@ struct WorkEntryListView: View {
         .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .background(.bar)
+        .foregroundStyle(Theme.gold)
+        .background(Theme.tabBar.ignoresSafeArea(edges: .bottom))
     }
 
-    private func actionBarButton(_ title: String, _ icon: String, disabled: Bool, tint: Color = .accentColor, action: @escaping () -> Void) -> some View {
+    private func actionBarButton(_ title: String, _ icon: String, disabled: Bool, tint: Color = Theme.gold, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                 Text(title).font(.caption2)
             }
+            .frame(minWidth: 44, minHeight: 44)
         }
-        .foregroundStyle(disabled ? Color.secondary.opacity(0.4) : tint)
+        .foregroundStyle(disabled ? Theme.textTertiary.opacity(0.5) : tint)
         .disabled(disabled)
     }
 
@@ -527,13 +580,15 @@ private struct ExportRangeSheet: View {
                     DatePicker("From", selection: $startDate, displayedComponents: .date)
                     DatePicker("To", selection: $endDate, displayedComponents: .date)
                 }
+                .themedRow()
                 Section {
                     HStack {
                         Text("Matching Entries")
                         Spacer()
-                        Text("\(filteredEntries.count)").foregroundStyle(.secondary)
+                        Text("\(filteredEntries.count)").foregroundStyle(Theme.textSecondary)
                     }
                 }
+                .themedRow()
                 Section {
                     if !filteredEntries.isEmpty {
                         Button(action: exportCSV) {
@@ -541,10 +596,12 @@ private struct ExportRangeSheet: View {
                         }
                     } else {
                         Label("No entries in this range", systemImage: "tray")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
+                .themedRow()
             }
+            .themedScreen()
             .navigationTitle("Export Range")
             .navigationBarTitleDisplayMode(.inline)
             .shareSheet(item: $shareItem)

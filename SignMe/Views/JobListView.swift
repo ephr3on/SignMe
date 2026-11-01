@@ -5,6 +5,7 @@ import SwiftData
 struct JobListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Job.createdAt, order: .reverse) private var allJobs: [Job]
+    @Query(sort: \SavedSignature.createdAt) private var signatures: [SavedSignature]
 
     @State private var searchText = ""
     @State private var showingAddJob = false
@@ -69,6 +70,7 @@ struct JobListView: View {
                 }
             }
         }
+        .themedScreen()
         .navigationTitle("Jobs")
         .navigationDestination(item: $selectedJob) { job in
             ProjectListView(job: job)
@@ -78,7 +80,7 @@ struct JobListView: View {
                 Menu {
                     Button { showingAddJob = true } label: { Label("Add Job", systemImage: "plus") }
                     Button {
-                        shareItem = ShareItem(ExportService.backupExportURL(jobs: allJobs))
+                        shareItem = ShareItem(ExportService.backupExportURL(jobs: allJobs, signatures: signatures))
                     } label: {
                         Label("Export Backup", systemImage: "square.and.arrow.up")
                     }
@@ -86,9 +88,11 @@ struct JobListView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("More")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAddJob = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add job")
             }
         }
         .sheet(isPresented: $showingAddJob) {

@@ -85,8 +85,8 @@ enum ExportService {
     }
 
     /// Writes a fresh JSON backup of every job/project/entry and returns a shareable file URL.
-    static func backupExportURL(jobs: [Job]) -> URL? {
-        guard let data = try? BackupService.exportData(jobs: jobs) else { return nil }
+    static func backupExportURL(jobs: [Job], signatures: [SavedSignature] = []) -> URL? {
+        guard let data = try? BackupService.exportData(jobs: jobs, signatures: signatures) else { return nil }
         return writeExportFile(data: data, filename: "SignMe-Backup-\(timestamp()).json")
     }
 
@@ -98,6 +98,12 @@ enum ExportService {
 
     // MARK: - PDF timesheet
 
+    /// What goes on the employee's signature line: the drawn signature (optional) and the date beside it.
+    struct SignatureStamp {
+        var image: UIImage?
+        var dateText: String
+    }
+
     /// Writes the monthly PDF timesheet and returns a shareable file URL.
     /// Filename format: "ProjectName_Month_Year.pdf".
     static func monthExportPDFURL(
@@ -105,9 +111,17 @@ enum ExportService {
         project: Project,
         monthDate: Date,
         entries: [WorkEntry],
-        settings: TimesheetSettings = .current
+        settings: TimesheetSettings = .current,
+        signature: SignatureStamp? = nil
     ) -> URL? {
-        let data = monthExportPDFData(job: job, project: project, monthDate: monthDate, entries: entries, settings: settings)
+        let data = monthExportPDFData(
+            job: job,
+            project: project,
+            monthDate: monthDate,
+            entries: entries,
+            settings: settings,
+            signature: signature
+        )
 
         let monthName = DateDurationService.monthNameFormatter.string(from: monthDate)
         let year = Calendar.current.component(.year, from: monthDate)
@@ -125,6 +139,7 @@ enum ExportService {
         monthDate: Date,
         entries: [WorkEntry],
         settings: TimesheetSettings = .current,
+        signature: SignatureStamp? = nil,
         generatedAt: Date = .now
     ) -> Data {
         let sortedEntries = entries.sorted { $0.startTime < $1.startTime }
@@ -268,6 +283,21 @@ enum ExportService {
             )
         }
 
+        /// The signature image (left, sitting on the line) and its date (right), above the employee line.
+        func drawStamp(_ stamp: SignatureStamp, lineX: CGFloat, lineY: CGFloat, width: CGFloat) {
+            let dateAttributes: [NSAttributedString.Key: Any] = [.font: bodyFont, .foregroundColor: UIColor.black]
+            let dateSize = (stamp.dateText as NSString).size(withAttributes: dateAttributes)
+            let dateX = lineX + width - dateSize.width
+            (stamp.dateText as NSString).draw(at: CGPoint(x: dateX, y: lineY - dateSize.height - 3), withAttributes: dateAttributes)
+
+            guard let image = stamp.image, image.size.width > 0, image.size.height > 0 else { return }
+            let maxWidth = max(40, dateX - lineX - 10)
+            let maxHeight: CGFloat = 46
+            let scale = min(maxWidth / image.size.width, maxHeight / image.size.height)
+            let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            image.draw(in: CGRect(x: lineX, y: lineY - size.height + 4, width: size.width, height: size.height))
+        }
+
         /// Draws the whole document. Rendered twice: once to count pages, then
         /// again with the known total for the "Page x of y" footers.
         func render(totalPages: Int?) -> (data: Data, pageCount: Int) {
@@ -322,6 +352,9 @@ enum ExportService {
                 let employeeLabel = settings.signerName.isEmpty
                     ? "Date, signature (employee)"
                     : "Date, signature — \(settings.signerName)"
+                if let signature {
+                    drawStamp(signature, lineX: margin, lineY: signatureY, width: signatureWidth)
+                }
                 drawSignatureLine(x: margin, y: signatureY, width: signatureWidth, label: employeeLabel)
                 if settings.includeSupervisorSignature {
                     drawSignatureLine(

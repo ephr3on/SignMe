@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The single consistent "primary action" button style used across the app.
+/// The single consistent "primary action" button used across the app (gold, navy text).
 struct PrimaryButton: View {
     let title: String
     var systemImage: String? = nil
@@ -14,13 +14,9 @@ struct PrimaryButton: View {
                     Image(systemName: systemImage)
                 }
                 Text(title)
-                    .fontWeight(.semibold)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.accentColor)
+        .buttonStyle(GoldButtonStyle(height: 50))
         .disabled(isDisabled)
     }
 }
@@ -31,4 +27,5 @@ struct PrimaryButton: View {
         PrimaryButton(title: "Save", isDisabled: true) {}
     }
     .padding()
+    .background(Theme.background)
 }

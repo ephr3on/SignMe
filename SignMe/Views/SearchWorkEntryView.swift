@@ -41,14 +41,17 @@ struct SearchWorkEntryView: View {
                 List(results) { entry in
                     Button { entryToEdit = entry } label: {
                         EntryRowView(entry: entry, showsProjectContext: true)
+                            .card(padding: 12, radius: 16)
                     }
                     .buttonStyle(.plain)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                 }
                 .listStyle(.plain)
             }
         }
+        .themedScreen()
         .navigationTitle("Search")
         .searchable(text: $query, prompt: "Search entries, jobs, projects…")
         .sheet(item: $entryToEdit) { entry in
@@ -64,4 +67,5 @@ struct SearchWorkEntryView: View {
         SearchWorkEntryView()
     }
     .modelContainer(PreviewSupport.container)
+    .preferredColorScheme(.dark)
 }

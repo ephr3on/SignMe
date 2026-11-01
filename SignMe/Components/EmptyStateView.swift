@@ -11,17 +11,18 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 36))
+                .foregroundStyle(Theme.gold)
                 .padding(22)
-                .background(.secondary.opacity(0.1), in: Circle())
+                .background(Theme.surfaceRaised, in: Circle())
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(Theme.display(.title3))
+                    .foregroundStyle(Theme.textPrimary)
                 Text(message)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -44,4 +45,5 @@ struct EmptyStateView: View {
         actionTitle: "Add Job",
         action: {}
     )
+    .background(Theme.background)
 }

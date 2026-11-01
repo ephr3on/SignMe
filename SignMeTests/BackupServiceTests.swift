@@ -8,7 +8,7 @@ final class BackupServiceTests: XCTestCase {
 
     /// A fresh in-memory store. The container is retained for the test's lifetime.
     private func makeContext() throws -> ModelContext {
-        let schema = Schema([Job.self, Project.self, WorkEntry.self])
+        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         containers.append(container)
@@ -120,6 +120,24 @@ final class BackupServiceTests: XCTestCase {
     func testGarbageIsRejected() throws {
         let context = try makeContext()
         XCTAssertThrowsError(try BackupService.importData(Data("not json".utf8), into: context, existingJobs: []))
+    }
+
+    func testSignaturesRoundTripOnce() throws {
+        let source = try makeContext()
+        seed(source, entryCount: 0)
+        let signature = SavedSignature(name: "Full signature", imageData: Data([0x89, 0x50, 0x4E, 0x47, 1, 2, 3]))
+        source.insert(signature)
+        let data = try BackupService.exportData(jobs: try jobs(in: source), signatures: [signature])
+
+        let destination = try makeContext()
+        let first = try BackupService.importData(data, into: destination, existingJobs: [])
+        XCTAssertEqual(first.newSignatures, 1)
+        let restored = try destination.fetch(FetchDescriptor<SavedSignature>())
+        XCTAssertEqual(restored.first?.name, "Full signature")
+        XCTAssertEqual(restored.first?.imageData, signature.imageData)
+
+        let second = try BackupService.importData(data, into: destination, existingJobs: try jobs(in: destination))
+        XCTAssertEqual(second.newSignatures, 0, "Re-importing must not duplicate signatures")
     }
 
     func testExportWritesVersionedWrapper() throws {

@@ -55,10 +55,12 @@ struct NameEntrySheet: View {
                 } footer: {
                     if isDuplicate {
                         Text("That name is already in use. Choose a different one.")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Theme.danger)
                     }
                 }
+                .themedRow()
             }
+            .themedScreen()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

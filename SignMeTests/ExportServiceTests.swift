@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import PDFKit
 @testable import SignMe
 
@@ -69,5 +70,28 @@ final class ExportServiceTests: XCTestCase {
         XCTAssertTrue(text.contains("Studienkolleg"))
         XCTAssertTrue(text.contains("Page 1 of \(document.pageCount)"))
         XCTAssertTrue(text.contains("supervisor"))
+    }
+
+    func testMonthPDFIncludesSignatureDate() throws {
+        let job = Job(name: "Studienkolleg")
+        let project = Project(name: "Tutoring")
+        let calendar = Calendar.current
+        let monthDate = calendar.date(from: DateComponents(year: 2026, month: 10, day: 1))!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 10, day: 5, hour: 9))!
+        let entry = WorkEntry(date: start, startTime: start, endTime: start.addingTimeInterval(3 * 3600), taskDescription: "Office hours")
+
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 120, height: 40)).image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 10, y: 15, width: 100, height: 4))
+        }
+        let stamp = ExportService.SignatureStamp(image: image, dateText: "31.10.2026")
+        let settings = TimesheetSettings(signerName: "Test Person", organization: "", includeSupervisorSignature: false)
+        let data = ExportService.monthExportPDFData(
+            job: job, project: project, monthDate: monthDate, entries: [entry], settings: settings, signature: stamp
+        )
+
+        let document = try XCTUnwrap(PDFDocument(data: data))
+        XCTAssertTrue((document.string ?? "").contains("31.10.2026"))
+        XCTAssertFalse((document.string ?? "").contains("supervisor"))
     }
 }

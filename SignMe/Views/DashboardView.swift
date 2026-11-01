@@ -1,379 +1,514 @@
 import SwiftUI
 import SwiftData
+import Charts
 
-/// The home screen: at-a-glance stats, quick actions, and recent activity.
+/// The home screen: live clock-in timer, monthly target, this week's hours and recent entries.
 struct DashboardView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Job.createdAt, order: .reverse) private var jobs: [Job]
+    @Environment(TimerStore.self) private var timer
+    @Query(sort: \Job.createdAt) private var jobs: [Job]
     @Query(sort: \WorkEntry.date, order: .reverse) private var allEntries: [WorkEntry]
 
-    @State private var showingSearch = false
+    @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
+    @AppStorage(AppSettings.Keys.lastProjectID) private var lastProjectID = AppSettings.Defaults.lastProjectID
+    @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
+
+    @State private var idleProjectID: UUID?
+    @State private var timerEntry: TimerEntryItem?
+    @State private var entryToEdit: WorkEntry?
     @State private var showingExportMonth = false
-
-    // "Add Task" flow: pick a job (skipped if there's only one), then a
-    // project (skipped if that job has only one), then the entry form.
-    @State private var showingAddTaskJobPicker = false
-    @State private var jobPickedForAddTask: Job?
-    @State private var showingAddTaskProjectPicker = false
-    @State private var jobForAddTaskProjectPicker: Job?
-    @State private var projectPickedForAddTask: Project?
-    @State private var addTaskEntryProject: Project?
-    @State private var addTaskAlertMessage: String?
-
-    private var totalHoursThisMonth: Double {
-        let calendar = Calendar.current
-        return allEntries
-            .filter { calendar.isDate($0.date, equalTo: .now, toGranularity: .month) && calendar.isDate($0.date, equalTo: .now, toGranularity: .year) }
-            .reduce(0) { $0 + $1.durationHours }
-    }
-
-    private var totalHoursThisWeek: Double {
-        let calendar = Calendar.current
-        return allEntries
-            .filter { calendar.isDate($0.date, equalTo: .now, toGranularity: .weekOfYear) && calendar.isDate($0.date, equalTo: .now, toGranularity: .yearForWeekOfYear) }
-            .reduce(0) { $0 + $1.durationHours }
-    }
-
-    private var totalProjects: Int { jobs.reduce(0) { $0 + $1.projects.count } }
-    private var recentEntries: [WorkEntry] { Array(allEntries.prefix(6)) }
+    @State private var showingTargetEditor = false
+    @State private var showingDiscardConfirm = false
+    @State private var showingTooShortAlert = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                greeting
-                statsGrid
-                quickActions
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                timerCard
+                targetCard
+                weekCard
                 recentSection
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 32)
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("SignMe")
-        .sheet(isPresented: $showingSearch) {
-            NavigationStack { SearchWorkEntryView() }
+        .themedScreen()
+        .toolbar(.hidden, for: .navigationBar)
+        .sheet(item: $timerEntry) { item in
+            EntryFormView(
+                project: project(with: item.snapshot.projectID),
+                prefill: EntryPrefill(start: item.snapshot.start, end: item.snapshot.end, breakMinutes: item.snapshot.breakMinutes),
+                onSaved: { timer.reset() }
+            )
+        }
+        .sheet(item: $entryToEdit) { entry in
+            EntryFormView(entryToEdit: entry)
         }
         .sheet(isPresented: $showingExportMonth) {
             ExportMonthSheet(jobs: jobs)
         }
-        .sheet(isPresented: $showingAddTaskJobPicker, onDismiss: {
-            if let job = jobPickedForAddTask {
-                jobPickedForAddTask = nil
-                proceedAfterJobChosenForAddTask(job)
-            }
-        }) {
-            DestinationPickerView(mode: .job, jobs: jobs, onSelectJob: { job in
-                jobPickedForAddTask = job
-            })
+        .sheet(isPresented: $showingTargetEditor) {
+            MonthlyTargetEditor(target: $monthlyTarget)
         }
-        .sheet(isPresented: $showingAddTaskProjectPicker, onDismiss: {
-            jobForAddTaskProjectPicker = nil
-            if let project = projectPickedForAddTask {
-                projectPickedForAddTask = nil
-                addTaskEntryProject = project
-            }
-        }) {
-            if let job = jobForAddTaskProjectPicker {
-                DestinationPickerView(mode: .project, jobs: [job], onSelectProject: { project in
-                    projectPickedForAddTask = project
-                })
-            }
-        }
-        .sheet(item: $addTaskEntryProject) { project in
-            EntryFormView(project: project)
-        }
-        .alert("Add a Task", isPresented: Binding(
-            get: { addTaskAlertMessage != nil },
-            set: { if !$0 { addTaskAlertMessage = nil } }
-        )) {
-            Button("OK") {}
+        .confirmationDialog("Discard the running timer?", isPresented: $showingDiscardConfirm, titleVisibility: .visible) {
+            Button("Discard Timer", role: .destructive) { timer.reset() }
         } message: {
-            Text(addTaskAlertMessage ?? "")
+            Text("The tracked time won't be saved.")
+        }
+        .alert("Less than a minute tracked", isPresented: $showingTooShortAlert) {
+            Button("Keep Running", role: .cancel) {}
+            Button("Discard", role: .destructive) { timer.reset() }
+        } message: {
+            Text("There's nothing to save yet.")
         }
     }
 
-    private var greeting: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(greetingText)
-                .font(.largeTitle.bold())
-            Text("Here's your work overview.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("SIGNME")
+                    .font(.system(.footnote, design: .serif, weight: .semibold))
+                    .tracking(3)
+                    .foregroundStyle(Theme.gold)
+                Text(greeting)
+                    .font(Theme.display(.title))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            Button {
+                showingExportMonth = true
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.gold)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Theme.surface))
+                    .overlay(Circle().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
+            }
+            .accessibilityLabel("Export month")
         }
+        .padding(.top, 8)
     }
 
-    private var greetingText: String {
+    private var greeting: String {
+        let base: String
         switch Calendar.current.component(.hour, from: .now) {
-        case 0..<12: return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default: return "Good evening"
+        case 5..<12: base = "Good morning"
+        case 12..<18: base = "Good afternoon"
+        default: base = "Good evening"
+        }
+        let firstName = signerName.split(separator: " ").first.map(String.init) ?? ""
+        return firstName.isEmpty ? base : "\(base), \(firstName)"
+    }
+
+    // MARK: - Timer
+
+    @ViewBuilder
+    private var timerCard: some View {
+        if timer.isRunning {
+            runningTimerCard
+        } else {
+            idleTimerCard
         }
     }
 
-    private var statsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-            StatCard(title: "This Month", value: DateDurationService.formattedDuration(hours: totalHoursThisMonth), icon: "calendar", tint: .blue)
-            StatCard(title: "This Week", value: DateDurationService.formattedDuration(hours: totalHoursThisWeek), icon: "clock.fill", tint: .indigo)
-            StatCard(title: "Jobs", value: "\(jobs.count)", icon: "briefcase.fill", tint: .teal)
-            StatCard(title: "Projects", value: "\(totalProjects)", icon: "folder.fill", tint: .orange)
-        }
-    }
+    private var runningTimerCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(timer.isOnBreak ? Theme.warning : Theme.success)
+                    .frame(width: 8, height: 8)
+                Text(timerStatusText)
+                    .font(Theme.sectionLabel)
+                    .tracking(1.2)
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Menu {
+                    projectMenuItems { project in timer.switchProject(to: project.id) }
+                    Divider()
+                    Button("Discard Timer", systemImage: "trash", role: .destructive) {
+                        showingDiscardConfirm = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 44, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Timer options")
+            }
 
-    private var quickActions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Actions").font(.headline)
-            HStack(spacing: 12) {
-                quickActionButton("Add Task", "plus.circle.fill", .accentColor) { startAddTask() }
-                quickActionButton("Search", "magnifyingglass.circle.fill", .purple) { showingSearch = true }
-                quickActionButton("Export Month", "square.and.arrow.up.circle.fill", .green) { showingExportMonth = true }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(TimerStore.clockText(timer.workedDuration(at: context.date)))
+                        .font(.system(size: 46, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(timer.isOnBreak ? Theme.textSecondary : Theme.textPrimary)
+                        .accessibilityLabel("Worked \(DateDurationService.formattedDuration(hours: timer.workedDuration(at: context.date) / 3600))")
+                    let breakTime = timer.breakDuration(at: context.date)
+                    if breakTime >= 60 {
+                        Text("Break \(DateDurationService.formattedDuration(hours: breakTime / 3600))")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
+
+            Text(runningProjectLine)
+                .font(.subheadline)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+
+            HStack(spacing: 10) {
+                Button(action: stopTimer) {
+                    Label("Stop & save", systemImage: "stop.fill")
+                }
+                .buttonStyle(GoldButtonStyle(height: 50))
+
+                Button {
+                    withAnimation { timer.toggleBreak() }
+                } label: {
+                    Text(timer.isOnBreak ? "Resume" : "Break")
+                }
+                .buttonStyle(OutlineButtonStyle(height: 50))
+                .frame(width: 118)
             }
         }
+        .card(padding: 18, radius: 22, highlighted: true)
     }
 
-    private func quickActionButton(_ title: String, _ icon: String, _ tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(tint)
-                Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
+    private var timerStatusText: String {
+        if timer.isOnBreak { return "ON BREAK" }
+        guard let start = timer.startedAt else { return "TRACKING" }
+        return "TRACKING · SINCE \(DateDurationService.timeFormatter.string(from: start))"
+    }
+
+    private var runningProjectLine: String {
+        guard let project = project(with: timer.projectID) else { return "Project not found — choose one in ⋯" }
+        return "\(project.job?.name ?? "") · \(project.name)"
+    }
+
+    private var idleTimerCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "timer")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Theme.gold)
+                Text("Ready to clock in?")
+                    .font(Theme.display(.title3))
+                    .foregroundStyle(Theme.textPrimary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(.background, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.quaternary, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
 
-    private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Entries").font(.headline)
-
-            if recentEntries.isEmpty {
-                EmptyStateView(
-                    icon: "clock.arrow.circlepath",
-                    title: "No entries yet",
-                    message: "Start tracking time to see recent activity here."
-                )
+            if allProjects.isEmpty {
+                Text("Create a job and a project in the Jobs tab to start tracking time.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
-                VStack(spacing: 10) {
-                    ForEach(recentEntries) { entry in
-                        EntryRowView(entry: entry, showsProjectContext: true)
-                            .padding(12)
-                            .background(.background, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(.quaternary, lineWidth: 1)
-                            )
+                Menu {
+                    projectMenuItems { project in idleProjectID = project.id }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(idleProject?.name ?? "Choose a project")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(idleProject?.job?.name ?? "")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.gold)
+                    }
+                    .padding(12)
+                    .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .accessibilityLabel("Timer project: \(idleProject?.name ?? "none")")
+
+                Button {
+                    guard let project = idleProject else { return }
+                    lastProjectID = project.id.uuidString
+                    withAnimation { timer.start(projectID: project.id) }
+                } label: {
+                    Label("Start timer", systemImage: "play.fill")
+                }
+                .buttonStyle(GoldButtonStyle(height: 50))
+                .disabled(idleProject == nil)
+            }
+        }
+        .card(padding: 18, radius: 22, highlighted: true)
+    }
+
+    private var idleProject: Project? {
+        if let idleProjectID, let match = project(with: idleProjectID) { return match }
+        return allProjects.first { $0.id.uuidString == lastProjectID } ?? allProjects.first
+    }
+
+    @ViewBuilder
+    private func projectMenuItems(_ select: @escaping (Project) -> Void) -> some View {
+        ForEach(jobs) { job in
+            if !job.projects.isEmpty {
+                Section(job.name) {
+                    ForEach(job.projects.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) { project in
+                        Button(project.name) { select(project) }
                     }
                 }
             }
         }
     }
 
-    // MARK: - Add Task flow
-
-    private func startAddTask() {
-        guard !jobs.isEmpty else {
-            addTaskAlertMessage = "Create a job first before adding a task."
-            return
-        }
-        if jobs.count == 1, let onlyJob = jobs.first {
-            proceedAfterJobChosenForAddTask(onlyJob)
+    private func stopTimer() {
+        guard let snapshot = timer.snapshot() else { return }
+        if snapshot.end.timeIntervalSince(snapshot.start) < 60 {
+            showingTooShortAlert = true
         } else {
-            showingAddTaskJobPicker = true
+            timerEntry = TimerEntryItem(snapshot: snapshot)
         }
     }
 
-    private func proceedAfterJobChosenForAddTask(_ job: Job) {
-        if job.projects.isEmpty {
-            addTaskAlertMessage = "Add a project to \"\(job.name)\" before adding a task."
-        } else if job.projects.count == 1, let onlyProject = job.projects.first {
-            addTaskEntryProject = onlyProject
-        } else {
-            jobForAddTaskProjectPicker = job
-            showingAddTaskProjectPicker = true
+    // MARK: - Target
+
+    private var monthHours: Double {
+        let calendar = Calendar.current
+        return allEntries
+            .filter { calendar.isDate($0.date, equalTo: .now, toGranularity: .month) }
+            .reduce(0) { $0 + $1.durationHours }
+    }
+
+    private var targetCard: some View {
+        Button {
+            showingTargetEditor = true
+        } label: {
+            HStack(spacing: 16) {
+                if monthlyTarget > 0 {
+                    let progress = monthHours / monthlyTarget
+                    ProgressRing(progress: progress, label: "\(Int((min(progress, 1) * 100).rounded()))%")
+                        .frame(width: 84, height: 84)
+                    VStack(alignment: .leading, spacing: 4) {
+                        SectionLabel("\(Date.now.formatted(.dateTime.month(.wide))) target")
+                        (Text(DateDurationService.formattedDuration(hours: monthHours))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                         + Text("  of \(DateDurationService.formattedDuration(hours: monthlyTarget))")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary))
+                            .monospacedDigit()
+                        Text(targetRemainingText)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                } else {
+                    Image(systemName: "target")
+                        .font(.title2)
+                        .foregroundStyle(Theme.gold)
+                        .frame(width: 52, height: 52)
+                        .background(Circle().fill(Theme.surfaceRaised))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Set a monthly target")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("See your progress toward your contract hours.")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .card(padding: 16, radius: 22)
         }
+        .buttonStyle(.plain)
+        .accessibilityHint("Edit monthly target")
+    }
+
+    private var targetRemainingText: String {
+        let remaining = monthlyTarget - monthHours
+        guard remaining > 0.005 else { return "Target reached this month" }
+        let workdays = remainingWorkdays()
+        let remainingText = DateDurationService.formattedDuration(hours: remaining)
+        guard workdays > 0 else { return "\(remainingText) to go" }
+        let perDay = DateDurationService.formattedDuration(hours: remaining / Double(workdays))
+        return "\(remainingText) to go · about \(perDay) per workday"
+    }
+
+    /// Monday–Friday days from today to the end of this month, today included.
+    private func remainingWorkdays() -> Int {
+        let calendar = Calendar.current
+        guard let monthEnd = calendar.dateInterval(of: .month, for: .now)?.end else { return 0 }
+        var day = calendar.startOfDay(for: .now)
+        var count = 0
+        while day < monthEnd {
+            if !calendar.isDateInWeekend(day) { count += 1 }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return count
+    }
+
+    // MARK: - Week chart
+
+    private struct DayHours: Identifiable {
+        let id: Date
+        let label: String
+        let hours: Double
+        let isToday: Bool
+    }
+
+    private var weekDays: [DayHours] {
+        let calendar = Calendar.current
+        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start else { return [] }
+        return (0..<7).compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: weekStart) else { return nil }
+            let hours = allEntries
+                .filter { calendar.isDate($0.date, inSameDayAs: day) }
+                .reduce(0) { $0 + $1.durationHours }
+            let weekday = calendar.component(.weekday, from: day)
+            return DayHours(
+                id: day,
+                label: calendar.shortStandaloneWeekdaySymbols[weekday - 1],
+                hours: hours,
+                isToday: calendar.isDateInToday(day)
+            )
+        }
+    }
+
+    private var weekCard: some View {
+        let days = weekDays
+        let total = days.reduce(0) { $0 + $1.hours }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel("This week")
+                Text(DateDurationService.formattedDuration(hours: total))
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .monospacedDigit()
+            }
+            Chart(days) { day in
+                BarMark(
+                    x: .value("Day", day.label),
+                    y: .value("Hours", day.hours)
+                )
+                .foregroundStyle(day.isToday ? Theme.gold : Theme.bar)
+                .cornerRadius(6)
+            }
+            .chartYAxis(.hidden)
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisValueLabel()
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .frame(height: 120)
+        }
+        .card(padding: 16, radius: 22)
+    }
+
+    // MARK: - Recent
+
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recent")
+                .font(Theme.display(.title3))
+                .foregroundStyle(Theme.textPrimary)
+
+            if allEntries.isEmpty {
+                EmptyStateView(
+                    icon: "clock.arrow.circlepath",
+                    title: "No entries yet",
+                    message: "Start the timer or tap + to log your first hours."
+                )
+                .card(padding: 4, radius: 20)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(allEntries.prefix(4)) { entry in
+                        Button {
+                            entryToEdit = entry
+                        } label: {
+                            EntryRowView(entry: entry, showsProjectContext: true)
+                                .card(padding: 12, radius: 16)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var allProjects: [Project] {
+        jobs.flatMap { job in
+            job.projects.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+    }
+
+    private func project(with id: UUID?) -> Project? {
+        guard let id else { return nil }
+        return allProjects.first { $0.id == id }
     }
 }
 
-/// Presented from the Dashboard's "Export Month" quick action — exports one
-/// project's entries for a single month as a signable PDF timesheet, ending
-/// with the total hours and signature lines.
-struct ExportMonthSheet: View {
+/// Wraps a timer snapshot so it can drive `.sheet(item:)`.
+private struct TimerEntryItem: Identifiable {
+    let id = UUID()
+    let snapshot: TimerStore.Snapshot
+}
+
+/// Small sheet to set or clear the monthly hours target.
+struct MonthlyTargetEditor: View {
     @Environment(\.dismiss) private var dismiss
-    let jobs: [Job]
+    @Binding var target: Double
+    @State private var hours: Int
 
-    @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
-
-    @State private var selectedJob: Job?
-    @State private var selectedProject: Project?
-    @State private var selectedMonthIndex: Int
-    @State private var selectedYear: Int
-    @State private var shareItem: ShareItem?
-
-    init(jobs: [Job]) {
-        self.jobs = jobs
-        let calendar = Calendar.current
-        _selectedMonthIndex = State(initialValue: calendar.component(.month, from: .now))
-        _selectedYear = State(initialValue: calendar.component(.year, from: .now))
-        let initialJob = jobs.count == 1 ? jobs.first : nil
-        _selectedJob = State(initialValue: initialJob)
-        _selectedProject = State(initialValue: (initialJob?.projects.count == 1) ? initialJob?.projects.first : nil)
-    }
-
-    private var availableYears: [Int] {
-        let currentYear = Calendar.current.component(.year, from: .now)
-        let entryYears = jobs.flatMap { $0.projects.flatMap(\.entries) }
-            .map { Calendar.current.component(.year, from: $0.date) }
-        var years = Set(entryYears)
-        years.insert(currentYear)
-        return years.sorted(by: >)
-    }
-
-    private var monthDate: Date {
-        Calendar.current.date(from: DateComponents(year: selectedYear, month: selectedMonthIndex)) ?? .now
-    }
-
-    private var matchingEntries: [WorkEntry] {
-        guard let project = selectedProject else { return [] }
-        let calendar = Calendar.current
-        return project.entries.filter {
-            calendar.component(.year, from: $0.date) == selectedYear &&
-            calendar.component(.month, from: $0.date) == selectedMonthIndex
-        }
-    }
-
-    private var totalHours: Double {
-        matchingEntries.reduce(0) { $0 + $1.durationHours }
-    }
-
-    private var canExport: Bool {
-        selectedJob != nil && selectedProject != nil && !matchingEntries.isEmpty
-    }
-
-    /// Renders the PDF only when the user taps Export, then opens the share sheet.
-    private func exportPDF() {
-        guard let job = selectedJob, let project = selectedProject, !matchingEntries.isEmpty else { return }
-        shareItem = ShareItem(
-            ExportService.monthExportPDFURL(job: job, project: project, monthDate: monthDate, entries: matchingEntries)
-        )
+    init(target: Binding<Double>) {
+        _target = target
+        _hours = State(initialValue: target.wrappedValue > 0 ? Int(target.wrappedValue.rounded()) : 80)
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if jobs.isEmpty {
-                    EmptyStateView(
-                        icon: "briefcase",
-                        title: "No Jobs Yet",
-                        message: "Create a job and project first, then come back to export a month of work."
-                    )
-                } else {
-                    form
+            VStack(spacing: 20) {
+                Text("How many hours do you want to work each month?")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                Stepper(value: $hours, in: 1...400) {
+                    Text("\(hours) h per month")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .monospacedDigit()
                 }
+                .card(padding: 14, radius: 16)
+                Button("Save target") {
+                    target = Double(hours)
+                    dismiss()
+                }
+                .buttonStyle(GoldButtonStyle())
+                if target > 0 {
+                    Button("Remove target", role: .destructive) {
+                        target = 0
+                        dismiss()
+                    }
+                    .foregroundStyle(Theme.danger)
+                }
+                Spacer(minLength: 0)
             }
-            .navigationTitle("Export Month")
+            .padding(20)
+            .themedScreen()
+            .navigationTitle("Monthly target")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
         }
-    }
-
-    private var form: some View {
-        Form {
-            if jobs.count > 1 {
-                Section("Job") {
-                    Picker("Job", selection: $selectedJob) {
-                        Text("Choose a job").tag(Job?.none)
-                        ForEach(jobs) { job in
-                            Text(job.name).tag(Optional(job))
-                        }
-                    }
-                    .onChange(of: selectedJob) { _, _ in selectedProject = nil }
-                }
-            }
-
-            if let job = selectedJob {
-                Section("Project") {
-                    if job.projects.isEmpty {
-                        Text("This job has no projects yet.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Project", selection: $selectedProject) {
-                            Text("Choose a project").tag(Project?.none)
-                            ForEach(job.projects) { project in
-                                Text(project.name).tag(Optional(project))
-                            }
-                        }
-                    }
-                }
-            }
-
-            Section("Month") {
-                Picker("Month", selection: $selectedMonthIndex) {
-                    ForEach(1...12, id: \.self) { index in
-                        Text(DateDurationService.monthNames[index - 1]).tag(index)
-                    }
-                }
-                Picker("Year", selection: $selectedYear) {
-                    ForEach(availableYears, id: \.self) { year in
-                        Text(String(year)).tag(year)
-                    }
-                }
-            }
-
-            Section {
-                HStack {
-                    Text("Matching Entries")
-                    Spacer()
-                    Text("\(matchingEntries.count)").foregroundStyle(.secondary)
-                }
-                HStack {
-                    Text("Total Hours")
-                    Spacer()
-                    Text(DateDurationService.formattedDuration(hours: totalHours))
-                        .font(.headline)
-                        .foregroundStyle(Color.accentColor)
-                }
-            }
-
-            Section {
-                TextField("Your name", text: $signerName)
-                    .textContentType(.name)
-                    .autocorrectionDisabled()
-            } header: {
-                Text("Name on Timesheet")
-            } footer: {
-                Text("Printed at the top of the PDF and under your signature line. More options are in Settings.")
-            }
-
-            Section {
-                if canExport {
-                    Button(action: exportPDF) {
-                        Label("Export Month (PDF)", systemImage: "square.and.arrow.up")
-                    }
-                } else {
-                    Label(
-                        selectedProject == nil ? "Choose a project to export" : "No entries in this month",
-                        systemImage: "tray"
-                    )
-                    .foregroundStyle(.secondary)
-                }
-            } footer: {
-                Text("The exported A4 PDF lists every entry for the selected project and month, with the total tracked hours and signature lines at the end.")
-            }
-        }
-        .shareSheet(item: $shareItem)
+        .presentationDetents([.height(340)])
     }
 }
 
@@ -382,4 +517,6 @@ struct ExportMonthSheet: View {
         DashboardView()
     }
     .modelContainer(PreviewSupport.container)
+    .environment(TimerStore(defaults: UserDefaults(suiteName: "preview")!))
+    .preferredColorScheme(.dark)
 }

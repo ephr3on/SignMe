@@ -32,6 +32,7 @@ struct DestinationPickerView: View {
                     projectList
                 }
             }
+            .themedScreen()
             .navigationTitle(mode == .job ? "Select Job" : "Select Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -54,13 +55,16 @@ struct DestinationPickerView: View {
                     } label: {
                         HStack {
                             Image(systemName: "briefcase.fill")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(Theme.gold)
                             Text(job.name)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(Theme.textPrimary)
                             Spacer()
                         }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .themedRow()
                 }
             }
         }
@@ -81,15 +85,18 @@ struct DestinationPickerView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: "folder.fill")
-                                            .foregroundStyle(.orange)
+                                            .foregroundStyle(Theme.gold)
                                         Text(project.name)
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Theme.textPrimary)
                                         Spacer()
                                     }
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
+                        .themedRow()
                     }
                 }
             }

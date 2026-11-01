@@ -8,23 +8,23 @@ struct JobCardView: View {
         HStack(spacing: 14) {
             Image(systemName: "briefcase.fill")
                 .font(.title3)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.background)
                 .frame(width: 44, height: 44)
-                .background(Color.accentColor.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Theme.gold, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(job.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                    .font(Theme.display(.headline))
+                    .foregroundStyle(Theme.textPrimary)
 
                 Text("\(job.projects.count) project\(job.projects.count == 1 ? "" : "s") · \(DateDurationService.formattedDuration(hours: job.totalHours))")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
 
                 if let last = job.lastActivityDate {
                     Text("Last activity \(DateDurationService.relativeFormatter.localizedString(for: last, relativeTo: .now))")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textTertiary)
                 }
             }
 
@@ -32,20 +32,15 @@ struct JobCardView: View {
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Theme.textTertiary)
         }
-        .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
+        .card(padding: 16, radius: 20)
     }
 }
 
 #Preview {
     JobCardView(job: PreviewSupport.sampleJob)
         .padding()
+        .background(Theme.background)
         .modelContainer(PreviewSupport.container)
 }

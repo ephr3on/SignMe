@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// A single work-entry row: description as the headline, date/time as secondary
-/// info, and duration as a compact trailing badge. Supports an optional
-/// selection-mode checkmark for the entries list's multi-select flow.
+/// A single work-entry row: a date badge, the description, the time range
+/// (with "+1" for overnight shifts and the break), and the worked duration in gold.
+/// Supports a selection-mode checkmark for the entries list's multi-select flow.
 struct EntryRowView: View {
     let entry: WorkEntry
     var showsProjectContext: Bool = false
@@ -14,43 +14,52 @@ struct EntryRowView: View {
             if selectionMode {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(isSelected ? Theme.gold : Theme.textTertiary)
                     .transition(.scale.combined(with: .opacity))
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(spacing: 0) {
+                Text(entry.date.formatted(.dateTime.weekday(.abbreviated)).uppercased())
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                Text(entry.date.formatted(.dateTime.day()))
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .monospacedDigit()
+            }
+            .frame(width: 42, height: 42)
+            .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.taskDescription.isEmpty ? "Untitled task" : entry.taskDescription)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
 
                 if showsProjectContext, let project = entry.project {
                     Text("\(project.job?.name ?? "—") · \(project.name)")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 10) {
-                    Label(DateDurationService.dateFormatter.string(from: entry.date), systemImage: "calendar")
-                    Label(timeRangeText, systemImage: "clock")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(timeRangeText)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 8)
 
             Text(DateDurationService.formattedDuration(hours: entry.durationHours))
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.accentColor.opacity(0.12), in: Capsule())
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.gold)
+                .monospacedDigit()
         }
-        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.15), value: selectionMode)
+        .accessibilityElement(children: .combine)
     }
 
     /// "09:00–17:00", plus "(+1)" for shifts past midnight and the break if any.
@@ -67,9 +76,11 @@ struct EntryRowView: View {
 }
 
 #Preview {
-    List {
+    VStack {
         EntryRowView(entry: PreviewSupport.sampleProject.entries.first!, showsProjectContext: true)
         EntryRowView(entry: PreviewSupport.sampleProject.entries.first!, isSelected: true, selectionMode: true)
     }
+    .padding()
+    .background(Theme.background)
     .modelContainer(PreviewSupport.container)
 }

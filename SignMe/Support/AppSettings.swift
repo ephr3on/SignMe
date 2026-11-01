@@ -7,12 +7,21 @@ enum AppSettings {
         static let signerName = "timesheet.signerName"
         static let organization = "timesheet.organization"
         static let includeSupervisorSignature = "timesheet.includeSupervisorSignature"
+        /// Monthly hours goal shown on the dashboard; 0 = no target.
+        static let monthlyTargetHours = "goal.monthlyTargetHours"
+        /// The project used most recently, pre-selected for new entries and the timer.
+        static let lastProjectID = "entry.lastProjectID"
+        /// Signature used automatically on export; empty = ask every time.
+        static let defaultSignatureID = "signature.defaultID"
     }
 
     enum Defaults {
         static let signerName = ""
         static let organization = ""
         static let includeSupervisorSignature = true
+        static let monthlyTargetHours = 0.0
+        static let lastProjectID = ""
+        static let defaultSignatureID = ""
     }
 }
 

@@ -31,14 +31,24 @@ struct BackupJobDTO: Codable {
     var projects: [BackupProjectDTO]
 }
 
+struct BackupSignatureDTO: Codable {
+    var id: UUID?
+    var name: String
+    /// PNG data (base64 in the JSON file).
+    var imageData: Data
+    var createdAt: Date?
+}
+
 /// Top-level backup file. Version 1 introduced this wrapper; files written by
 /// earlier builds are a bare `[BackupJobDTO]` array and are still accepted.
+/// `signatures` was added later and is optional.
 struct BackupFile: Codable {
     static let currentFormatVersion = 1
 
     var formatVersion: Int
     var exportedAt: Date
     var jobs: [BackupJobDTO]
+    var signatures: [BackupSignatureDTO]?
 }
 
 enum BackupError: LocalizedError {
@@ -63,16 +73,21 @@ struct ImportSummary {
     var newProjects: Int
     var newEntries: Int
     var skippedDuplicates: Int
+    var newSignatures: Int = 0
 
     var isEmpty: Bool {
-        newJobs == 0 && newProjects == 0 && newEntries == 0 && skippedDuplicates == 0
+        newJobs == 0 && newProjects == 0 && newEntries == 0 && skippedDuplicates == 0 && newSignatures == 0
     }
 
     var message: String {
-        if newJobs == 0 && newProjects == 0 && newEntries == 0 {
+        if newJobs == 0 && newProjects == 0 && newEntries == 0 && newSignatures == 0 {
             return "Nothing new to import — your data is already up to date."
         }
-        return "Added \(newJobs) job(s), \(newProjects) project(s), and \(newEntries) entr\(newEntries == 1 ? "y" : "ies"). Skipped \(skippedDuplicates) duplicate(s)."
+        var text = "Added \(newJobs) job(s), \(newProjects) project(s), and \(newEntries) entr\(newEntries == 1 ? "y" : "ies")"
+        if newSignatures > 0 {
+            text += ", plus \(newSignatures) signature(s)"
+        }
+        return text + ". Skipped \(skippedDuplicates) duplicate(s)."
     }
 }
 
@@ -80,7 +95,7 @@ enum BackupService {
 
     // MARK: - Export
 
-    static func exportData(jobs: [Job], exportedAt: Date = .now) throws -> Data {
+    static func exportData(jobs: [Job], signatures: [SavedSignature] = [], exportedAt: Date = .now) throws -> Data {
         let dtos = jobs.map { job in
             BackupJobDTO(
                 id: job.id,
@@ -109,7 +124,15 @@ enum BackupService {
             )
         }
 
-        let file = BackupFile(formatVersion: BackupFile.currentFormatVersion, exportedAt: exportedAt, jobs: dtos)
+        let signatureDTOs = signatures.map {
+            BackupSignatureDTO(id: $0.id, name: $0.name, imageData: $0.imageData, createdAt: $0.createdAt)
+        }
+        let file = BackupFile(
+            formatVersion: BackupFile.currentFormatVersion,
+            exportedAt: exportedAt,
+            jobs: dtos,
+            signatures: signatureDTOs.isEmpty ? nil : signatureDTOs
+        )
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -124,6 +147,10 @@ enum BackupService {
 
     /// Reads either the current wrapped format or the legacy bare-array format.
     static func decodeJobs(from data: Data) throws -> [BackupJobDTO] {
+        try decodeFile(from: data).jobs
+    }
+
+    static func decodeFile(from data: Data) throws -> BackupFile {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
@@ -131,10 +158,10 @@ enum BackupService {
             guard file.formatVersion <= BackupFile.currentFormatVersion else {
                 throw BackupError.unsupportedVersion(file.formatVersion)
             }
-            return file.jobs
+            return file
         }
         if let legacy = try? decoder.decode([BackupJobDTO].self, from: data) {
-            return legacy
+            return BackupFile(formatVersion: 0, exportedAt: .distantPast, jobs: legacy, signatures: nil)
         }
         throw BackupError.decodingFailed
     }
@@ -151,7 +178,8 @@ enum BackupService {
     /// are tolerated (the first match wins) instead of crashing.
     @discardableResult
     static func importData(_ data: Data, into context: ModelContext, existingJobs: [Job]) throws -> ImportSummary {
-        let jobDTOs = try decodeJobs(from: data)
+        let file = try decodeFile(from: data)
+        let jobDTOs = file.jobs
 
         var jobsByName = Dictionary(
             existingJobs.map { ($0.name.normalizedNameKey, $0) },
@@ -224,13 +252,42 @@ enum BackupService {
             }
         }
 
+        // Signatures: skip ones already present (same id, or same name and image).
+        var newSignatures = 0
+        if let signatureDTOs = file.signatures, !signatureDTOs.isEmpty {
+            let existing = (try? context.fetch(FetchDescriptor<SavedSignature>())) ?? []
+            var knownIDs = Set(existing.map(\.id))
+            var knownContent = Set(existing.map { "\($0.name)|\($0.imageData.hashValue)" })
+            for dto in signatureDTOs {
+                let contentKey = "\(dto.name)|\(dto.imageData.hashValue)"
+                if let id = dto.id, knownIDs.contains(id) { continue }
+                if knownContent.contains(contentKey) { continue }
+                let signature = SavedSignature(
+                    id: unusedID(dto.id, known: knownIDs),
+                    name: dto.name,
+                    imageData: dto.imageData,
+                    createdAt: dto.createdAt ?? .now
+                )
+                context.insert(signature)
+                knownIDs.insert(signature.id)
+                knownContent.insert(contentKey)
+                newSignatures += 1
+            }
+        }
+
         do {
             try context.save()
         } catch {
             context.rollback()
             throw error
         }
-        return ImportSummary(newJobs: newJobs, newProjects: newProjects, newEntries: newEntries, skippedDuplicates: skipped)
+        return ImportSummary(
+            newJobs: newJobs,
+            newProjects: newProjects,
+            newEntries: newEntries,
+            skippedDuplicates: skipped,
+            newSignatures: newSignatures
+        )
     }
 
     // MARK: - Helpers
