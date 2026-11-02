@@ -20,16 +20,23 @@ struct DashboardView: View {
     @State private var showingTargetEditor = false
     @State private var showingDiscardConfirm = false
     @State private var showingTooShortAlert = false
+    @State private var showingCustomize = false
+    @AppStorage(AppSettings.Keys.homeOrder) private var homeOrderRaw = AppSettings.Defaults.homeOrder
+    @AppStorage(AppSettings.Keys.homeHidden) private var homeHiddenRaw = AppSettings.Defaults.homeHidden
+
+    private var homeLayout: HomeLayout { HomeLayout(orderRaw: homeOrderRaw, hiddenRaw: homeHiddenRaw) }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                timerCard
-                targetCard
-                weekCard
-                calendarCard
-                recentSection
+                ForEach(homeLayout.visible) { section in
+                    homeSection(section)
+                }
+                if homeLayout.visible.isEmpty {
+                    allHiddenNotice
+                }
+                customizeButton
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -50,6 +57,17 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showingExportMonth) {
             ExportMonthSheet(jobs: jobs)
+        }
+        .sheet(isPresented: $showingCustomize) {
+            NavigationStack {
+                HomeCustomizeView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingCustomize = false }
+                        }
+                    }
+            }
+            .environment(\.tabBarInset, 0)
         }
         .sheet(isPresented: $showingTargetEditor) {
             MonthlyTargetEditor(target: $monthlyTarget)
@@ -85,6 +103,17 @@ struct DashboardView: View {
             }
             Spacer()
             Button {
+                showingCustomize = true
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.app(.body, .semibold))
+                    .foregroundStyle(Theme.gold)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Theme.surface))
+                    .overlay(Circle().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
+            }
+            .accessibilityLabel("Customize Home")
+            Button {
                 showingExportMonth = true
             } label: {
                 Image(systemName: "square.and.arrow.up")
@@ -108,6 +137,44 @@ struct DashboardView: View {
         }
         let firstName = signerName.split(separator: " ").first.map(String.init) ?? ""
         return firstName.isEmpty ? base : "\(base), \(firstName)"
+    }
+
+    // MARK: - Layout
+
+    @ViewBuilder
+    private func homeSection(_ section: HomeSection) -> some View {
+        switch section {
+        case .timer: timerCard
+        case .target: targetCard
+        case .week: weekCard
+        case .calendar: calendarCard
+        case .recent: recentSection
+        }
+    }
+
+    private var allHiddenNotice: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "square.grid.2x2")
+                .font(.app(.title2))
+                .foregroundStyle(Theme.textTertiary)
+            Text("All Home cards are switched off.")
+                .font(.app(.subheadline, .semibold))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
+    private var customizeButton: some View {
+        Button {
+            showingCustomize = true
+        } label: {
+            Label("Customize Home", systemImage: "slider.horizontal.3")
+                .font(.app(.subheadline, .semibold))
+                .foregroundStyle(Theme.gold)
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .padding(.top, 4)
     }
 
     // MARK: - Timer

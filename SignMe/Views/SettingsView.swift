@@ -13,6 +13,13 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
     @AppStorage(AppSettings.Keys.defaultSignatureID) private var defaultSignatureID = AppSettings.Defaults.defaultSignatureID
     @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
+    @AppStorage(AppSettings.Keys.homeOrder) private var homeOrderRaw = AppSettings.Defaults.homeOrder
+    @AppStorage(AppSettings.Keys.homeHidden) private var homeHiddenRaw = AppSettings.Defaults.homeHidden
+
+    private var homeSummary: String {
+        let layout = HomeLayout(orderRaw: homeOrderRaw, hiddenRaw: homeHiddenRaw)
+        return "\(layout.visible.count) of \(HomeSection.allCases.count) cards"
+    }
 
     var body: some View {
         List {
@@ -69,10 +76,21 @@ struct SettingsView: View {
                         value: "\(ThemeManager.shared.preset.title) · \((AppTheme(rawValue: themeRawValue) ?? .light).title)"
                     )
                 }
+                NavigationLink {
+                    HomeCustomizeView()
+                        .tabBarSpace()
+                } label: {
+                    SettingsRow(
+                        icon: "square.grid.2x2",
+                        tint: Color(hex: 0x1F8A9B),
+                        title: "Home screen",
+                        value: homeSummary
+                    )
+                }
             } header: {
                 SettingsHeader("Appearance")
             } footer: {
-                Text("Choose from ready-made themes or create your own, each in light and dark.")
+                Text("Themes in light and dark, and which cards Home shows in what order.")
                     .font(.app(.footnote))
             }
             .themedRow()

@@ -17,6 +17,10 @@ enum AppSettings {
         static let theme = "appearance.theme"
         /// Weekly hours limit for calendar warnings; 0 = off.
         static let weeklyLimitHours = "goal.weeklyLimitHours"
+        /// Home cards in display order, comma-separated `HomeSection` raw values.
+        static let homeOrder = "home.order"
+        /// Home cards the user switched off, comma-separated.
+        static let homeHidden = "home.hidden"
     }
 
     enum Defaults {
@@ -28,6 +32,8 @@ enum AppSettings {
         static let defaultSignatureID = ""
         static let theme = AppTheme.light.rawValue
         static let weeklyLimitHours = 0.0
+        static let homeOrder = HomeLayout.default.orderRaw
+        static let homeHidden = ""
     }
 }
 
