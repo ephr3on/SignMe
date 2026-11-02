@@ -1,0 +1,12 @@
+{
+ "Classic":    {"bg": ["#213560", "#132240", "#0A1428"], "metal": ["#FBE6A6", "#E2B657", "#A9782A"], "iris": ["#FFF0BF", "#E6BC5C", "#9C6E22"], "sclera": ["#2A4378", "#192B52"], "ink": "#0E1A33"},
+ "Ivory":      {"bg": ["#FFFBF1", "#F3EBD8", "#E0D3B5"], "metal": ["#E7C46C", "#C6942C", "#8A6016"], "iris": ["#FFF3C8", "#E3B34E", "#9A6A1C"], "sclera": ["#FFFFFF", "#EDE3CC"], "ink": "#13213D", "shadow": 0.2},
+ "Lapis":      {"bg": ["#3369CC", "#1E4AA6", "#102A6C"], "metal": ["#FBE6A6", "#E2B657", "#A9782A"], "iris": ["#FFF0BF", "#E6BC5C", "#9C6E22"], "sclera": ["#3D74D6", "#2756B2"], "ink": "#0C1C48"},
+ "Papyrus":    {"bg": ["#F1E2BC", "#DCC690", "#B99D62"], "metal": ["#5A4630", "#35281A", "#1B130A"], "iris": ["#FFF0BF", "#E6BC5C", "#9C6E22"], "sclera": ["#F7EDD2", "#E4D2A4"], "ink": "#1C140A", "shadow": 0.22},
+ "Sage":       {"bg": ["#46664A", "#2D4630", "#172818"], "metal": ["#F4E9C6", "#D3BE88", "#9A8350"], "iris": ["#F8F0D2", "#CDB67E", "#836E42"], "sclera": ["#527556", "#36523A"], "ink": "#13221A"},
+ "Ocean":      {"bg": ["#226680", "#15465E", "#0A2738"], "metal": ["#EDFCFF", "#A4DBE6", "#4E97A9"], "iris": ["#F2FDFF", "#8BD1DF", "#3A8496"], "sclera": ["#2D7590", "#1B526A"], "ink": "#082231"},
+ "Terracotta": {"bg": ["#C76D43", "#A4512D", "#6C3017"], "metal": ["#FFF5E4", "#F1D6AE", "#C49866"], "iris": ["#FFF6E6", "#E8C08A", "#B07F45"], "sclera": ["#BD6238", "#97461F"], "ink": "#3A160A"},
+ "Lavender":   {"bg": ["#6352A2", "#45367D", "#271D4D"], "metal": ["#F7F2FF", "#CFC0F3", "#8D78C8"], "iris": ["#FBF7FF", "#C4B0EF", "#7B62BC"], "sclera": ["#6656A8", "#493A84"], "ink": "#1A1236"},
+ "Rose":       {"bg": ["#963A56", "#72233D", "#431122"], "metal": ["#FFE8DD", "#EAB19B", "#B57460"], "iris": ["#FFF1EA", "#E7A994", "#A9654F"], "sclera": ["#963E59", "#712642"], "ink": "#2E0C17"},
+ "Graphite":   {"bg": ["#40454E", "#262A30", "#111316"], "metal": ["#FFFFFF", "#CBD0D8", "#858C97"], "iris": ["#FFFFFF", "#C1C8D3", "#6F7785"], "sclera": ["#474D57", "#2D3238"], "ink": "#0E1013"}
+}

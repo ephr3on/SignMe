@@ -153,6 +153,7 @@ final class ThemeManager {
         self.preset = preset
         defaults.set(preset.rawValue, forKey: Keys.preset)
         rebuild()
+        AppIconManager.themeDidChange(to: preset)
     }
 
     /// Updates the custom colors and switches to the Custom theme.

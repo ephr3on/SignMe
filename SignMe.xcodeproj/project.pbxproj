@@ -12,6 +12,7 @@
 		D701027749004AA49D8F4045 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAAAEDAA8114AB29A32E7ED /* CalendarService.swift */; };
 		3A79AFB275847496E58BBEE5 /* TimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C7B984CD999DDBD000BC63 /* TimerStore.swift */; };
 		0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF109843F3D7D055E92BC25 /* DashboardView.swift */; };
+		9F1F5E04DB954FC1911996F9 /* AppIconSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52537DFA1896488484DC3A4C /* AppIconSettingsView.swift */; };
 		CD356E4717C2486B9BB39320 /* PlannedTaskViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */; };
 		D213DD28063B4C00AE9F3EC2 /* ShiftTemplatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */; };
 		D8EC308F621C4919AC3A0E32 /* WorkCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */; };
@@ -87,6 +88,7 @@
 		0AAAAEDAA8114AB29A32E7ED /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		C3C7B984CD999DDBD000BC63 /* TimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStore.swift; sourceTree = "<group>"; };
 		5EF109843F3D7D055E92BC25 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		52537DFA1896488484DC3A4C /* AppIconSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconSettingsView.swift; sourceTree = "<group>"; };
 		1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedTaskViews.swift; sourceTree = "<group>"; };
 		23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTemplatesView.swift; sourceTree = "<group>"; };
 		CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkCalendarView.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				5EF109843F3D7D055E92BC25 /* DashboardView.swift */,
+				52537DFA1896488484DC3A4C /* AppIconSettingsView.swift */,
 				1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */,
 				23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */,
 				CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */,
@@ -329,6 +332,7 @@
 				E64E8FAA649427B44D78766B /* BackupService.swift in Sources */,
 				AFEA3958E655C85125CB6FA2 /* ContentView.swift in Sources */,
 				0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */,
+				9F1F5E04DB954FC1911996F9 /* AppIconSettingsView.swift in Sources */,
 				CD356E4717C2486B9BB39320 /* PlannedTaskViews.swift in Sources */,
 				D213DD28063B4C00AE9F3EC2 /* ShiftTemplatesView.swift in Sources */,
 				D8EC308F621C4919AC3A0E32 /* WorkCalendarView.swift in Sources */,
@@ -434,6 +438,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
@@ -457,6 +462,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;

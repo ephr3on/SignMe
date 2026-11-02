@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Settings hub: a short, grouped overview. Each area opens its own page so no
 /// screen gets long or crowded.
@@ -20,6 +21,14 @@ struct SettingsView: View {
     private var plannedSummary: String {
         let open = plannedTasks.filter { $0.status == .planned }.count
         return open == 0 ? "None" : "\(open) open"
+    }
+
+    /// Bumped when Settings reappears so the icon preview reflects a change made on the icon page.
+    @State private var iconRefresh = 0
+
+    private var currentIcon: AppIconChoice {
+        _ = iconRefresh
+        return AppIconChoice(alternateName: UIApplication.shared.alternateIconName)
     }
 
     private var homeSummary: String {
@@ -96,6 +105,19 @@ struct SettingsView: View {
                     )
                 }
                 NavigationLink {
+                    AppIconSettingsView()
+                } label: {
+                    HStack(spacing: 0) {
+                        SettingsRow(icon: "app.badge", tint: Color(hex: 0xB08A1E), title: "App icon", value: nil)
+                        Spacer(minLength: 8)
+                        Image(currentIcon.previewName)
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            .accessibilityLabel(currentIcon.title)
+                    }
+                }
+                NavigationLink {
                     HomeCustomizeView()
                         .tabBarSpace()
                 } label: {
@@ -109,7 +131,7 @@ struct SettingsView: View {
             } header: {
                 SettingsHeader("Appearance")
             } footer: {
-                Text("Themes in light and dark, and which cards Home shows in what order.")
+                Text("Themes in light and dark, the app icon, and which cards Home shows in what order.")
                     .font(.app(.footnote))
             }
             .themedRow()
@@ -155,6 +177,7 @@ struct SettingsView: View {
         .tabBarSpace()
         .navigationTitle("Settings")
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear { iconRefresh += 1 }
     }
 
     private var signatureSummary: String {

@@ -21,6 +21,8 @@ enum AppSettings {
         static let homeOrder = "home.order"
         /// Home cards the user switched off, comma-separated.
         static let homeHidden = "home.hidden"
+        /// Switch the app icon along with the theme.
+        static let iconFollowsTheme = "appearance.iconFollowsTheme"
     }
 
     enum Defaults {
@@ -34,6 +36,7 @@ enum AppSettings {
         static let weeklyLimitHours = 0.0
         static let homeOrder = HomeLayout.default.orderRaw
         static let homeHidden = ""
+        static let iconFollowsTheme = false
     }
 }
 
