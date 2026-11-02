@@ -19,6 +19,7 @@
 		1AB217962B5A3F96B0AC5506 /* DestinationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A58C759C1076A9286B4B5203 /* DestinationPickerView.swift */; };
 		29513463A4B8F2A2406F27B0 /* ProjectListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 807C83296B30E6A5173E007A /* ProjectListView.swift */; };
 		36CA8D02D8A6D4DEE11CDF4D /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70078435947D47B64E370F44 /* EmptyStateView.swift */; };
+		305E33B07C7A445BAD7069E8 /* TabHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292FFFF095AF4FF5A9251C80 /* TabHeader.swift */; };
 		3D02A745BF97DED275FAA54E /* WorkEntryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43B8DDBC2BBEA4B699D49F0 /* WorkEntryListView.swift */; };
 		44DBFDEEF21CFAD96C813C5C /* SignMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705750FA00D5D56A066817B /* SignMeApp.swift */; };
 		524BF5FB64FD3A9A250F5232 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D99162304D7B038A09099 /* PreviewSupport.swift */; };
@@ -88,6 +89,7 @@
 		7381C8FFD88E0FB8508F028F /* SignaturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignaturesView.swift; sourceTree = "<group>"; };
 		5F9F40D8CE480D9503E6D89B /* ProjectCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCardView.swift; sourceTree = "<group>"; };
 		70078435947D47B64E370F44 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		292FFFF095AF4FF5A9251C80 /* TabHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabHeader.swift; sourceTree = "<group>"; };
 		761BD13C8AD843E04AC379E4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7C19086B20AE93C24A31AA96 /* JobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobListView.swift; sourceTree = "<group>"; };
 		7F7507094C795AB3D6A5671D /* JobCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobCardView.swift; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				70078435947D47B64E370F44 /* EmptyStateView.swift */,
+				292FFFF095AF4FF5A9251C80 /* TabHeader.swift */,
 				1885DBEB7313317CF4CAFEF6 /* EntryRowView.swift */,
 				E45870043981F01E096C76C2 /* SignaturePad.swift */,
 				653FC790BCB33C7E3DB93198 /* ShareSheet.swift */,
@@ -325,6 +328,7 @@
 				548038E328D128ACA2DD7407 /* DateDurationService.swift in Sources */,
 				1AB217962B5A3F96B0AC5506 /* DestinationPickerView.swift in Sources */,
 				36CA8D02D8A6D4DEE11CDF4D /* EmptyStateView.swift in Sources */,
+				305E33B07C7A445BAD7069E8 /* TabHeader.swift in Sources */,
 				89CBB891BF98EE8092F7B69A /* EntryFormView.swift in Sources */,
 				74F364AD5810E3CD84576F08 /* EntryRowView.swift in Sources */,
 				6FD42808AC2A49DAA75ED6B1 /* SignaturePad.swift in Sources */,

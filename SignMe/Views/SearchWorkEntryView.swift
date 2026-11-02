@@ -114,6 +114,7 @@ struct SearchWorkEntryView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12, pinnedViews: []) {
+                TabHeader(title: "Search", subtitle: "Every entry across all jobs")
                 searchField
                 filterBar
                 summary
@@ -127,6 +128,7 @@ struct SearchWorkEntryView: View {
         .themedScreen()
         .tabBarSpace()
         .navigationTitle("Search")
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $entryToEdit) { entry in
             EntryFormView(entryToEdit: entry)
         }

@@ -23,6 +23,9 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            TabHeader(title: "Settings")
+                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                .listRowBackground(Color.clear)
             Section {
                 NavigationLink {
                     TimesheetSettingsView()
@@ -135,6 +138,7 @@ struct SettingsView: View {
         .themedScreen()
         .tabBarSpace()
         .navigationTitle("Settings")
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var signatureSummary: String {

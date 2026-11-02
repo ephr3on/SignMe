@@ -23,17 +23,63 @@ struct JobListView: View {
         return allJobs.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
 
+    private var header: some View {
+        TabHeader(
+            title: "Jobs",
+            subtitle: allJobs.isEmpty ? nil : "\(allJobs.count) \(allJobs.count == 1 ? "job" : "jobs")"
+        ) {
+            Menu {
+                Button { showingAddJob = true } label: { Label("Add Job", systemImage: "plus") }
+                Button {
+                    shareItem = ShareItem(ExportService.backupExportURL(jobs: allJobs, signatures: signatures))
+                } label: {
+                    Label("Export Backup", systemImage: "square.and.arrow.up")
+                }
+                Button { showingImporter = true } label: { Label("Import Backup", systemImage: "square.and.arrow.down") }
+            } label: {
+                HeaderIcon(systemName: "ellipsis")
+            }
+            .accessibilityLabel("More")
+            Button { showingAddJob = true } label: { HeaderIcon(systemName: "plus") }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add job")
+        }
+    }
+
     var body: some View {
         Group {
             if allJobs.isEmpty {
-                EmptyStateView(
-                    icon: "briefcase",
-                    title: "No jobs yet",
-                    message: "Create your first job to start tracking work.",
-                    actionTitle: "Add Job"
-                ) { showingAddJob = true }
+                VStack(spacing: 0) {
+                    header
+                        .padding(.horizontal, 20)
+                    EmptyStateView(
+                        icon: "briefcase",
+                        title: "No jobs yet",
+                        message: "Create your first job to start tracking work.",
+                        actionTitle: "Add Job"
+                    ) { showingAddJob = true }
+                }
             } else {
                 List {
+                    Group {
+                        header
+                        InlineSearchField(text: $searchText, prompt: "Search jobs")
+                            .padding(.bottom, 4)
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+
+                    if !searchText.isEmpty && filteredJobs.isEmpty {
+                        Text("No jobs match “\(searchText)”.")
+                            .font(.app(.subheadline))
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
+
                     ForEach(filteredJobs) { job in
                         Button {
                             selectedJob = job
@@ -62,12 +108,7 @@ struct JobListView: View {
                     }
                 }
                 .listStyle(.plain)
-                .searchable(text: $searchText, prompt: "Search jobs")
-                .overlay {
-                    if !searchText.isEmpty && filteredJobs.isEmpty {
-                        EmptyStateView(icon: "magnifyingglass", title: "No matches", message: "Try a different search term.")
-                    }
-                }
+                .scrollDismissesKeyboard(.immediately)
             }
         }
         .themedScreen()
@@ -76,26 +117,7 @@ struct JobListView: View {
         .navigationDestination(item: $selectedJob) { job in
             ProjectListView(job: job)
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button { showingAddJob = true } label: { Label("Add Job", systemImage: "plus") }
-                    Button {
-                        shareItem = ShareItem(ExportService.backupExportURL(jobs: allJobs, signatures: signatures))
-                    } label: {
-                        Label("Export Backup", systemImage: "square.and.arrow.up")
-                    }
-                    Button { showingImporter = true } label: { Label("Import Backup", systemImage: "square.and.arrow.down") }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel("More")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showingAddJob = true } label: { Image(systemName: "plus") }
-                    .accessibilityLabel("Add job")
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingAddJob) {
             NameEntrySheet(title: "New Job", fieldLabel: "Job Name", existingNames: allJobs.map(\.name)) { name in
                 let job = Job(name: name)

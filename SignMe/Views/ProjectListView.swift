@@ -80,6 +80,7 @@ struct ProjectListView: View {
         .themedScreen()
         .tabBarSpace()
         .navigationTitle(job.name)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $selectedProject) { project in
             WorkEntryListView(project: project)
         }
