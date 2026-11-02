@@ -171,19 +171,96 @@ enum ExportService {
         settings: TimesheetSettings = .current,
         signature: SignatureStamp? = nil
     ) -> [URL]? {
+        periodExportPDFURLs(projects: projects, period: .month(monthDate), settings: settings, signature: signature)
+    }
+
+    /// A span of time to export: a whole month, or any range of days.
+    struct ExportPeriod: Equatable {
+        /// Start of the first day ..< start of the day after the last day.
+        let interval: DateInterval
+        let isWholeMonth: Bool
+
+        static func month(_ date: Date, calendar: Calendar = .current) -> ExportPeriod {
+            let interval = calendar.dateInterval(of: .month, for: date) ?? DateInterval(start: date, duration: 0)
+            return ExportPeriod(interval: interval, isWholeMonth: true)
+        }
+
+        /// All days from `first` through `last` (inclusive, in either order).
+        static func days(_ first: Date, _ last: Date, calendar: Calendar = .current) -> ExportPeriod {
+            let a = calendar.startOfDay(for: min(first, last))
+            let b = calendar.startOfDay(for: max(first, last))
+            let end = calendar.date(byAdding: .day, value: 1, to: b) ?? b
+            let interval = DateInterval(start: a, end: end)
+            if let month = calendar.dateInterval(of: .month, for: a), month == interval {
+                return ExportPeriod(interval: interval, isWholeMonth: true)
+            }
+            return ExportPeriod(interval: interval, isWholeMonth: false)
+        }
+
+        var firstDay: Date { interval.start }
+        var lastDay: Date { interval.end.addingTimeInterval(-1) }
+
+        func contains(_ date: Date) -> Bool {
+            date >= interval.start && date < interval.end
+        }
+
+        /// "October 2026", "5 Oct 2026", or "5 Oct – 11 Oct 2026".
+        var label: String {
+            if isWholeMonth { return DateDurationService.monthYearFormatter.string(from: firstDay) }
+            let calendar = Calendar.current
+            if calendar.isDate(firstDay, inSameDayAs: lastDay) {
+                return firstDay.formatted(.dateTime.day().month(.abbreviated).year())
+            }
+            let sameYear = calendar.isDate(firstDay, equalTo: lastDay, toGranularity: .year)
+            let start = sameYear
+                ? firstDay.formatted(.dateTime.day().month(.abbreviated))
+                : firstDay.formatted(.dateTime.day().month(.abbreviated).year())
+            return "\(start) – \(lastDay.formatted(.dateTime.day().month(.abbreviated).year()))"
+        }
+
+        /// "Project_October_2026.pdf" or "Project_2026-10-05_to_2026-10-11.pdf".
+        func pdfFilename(for project: Project) -> String {
+            if isWholeMonth { return ExportService.monthPDFFilename(project: project, monthDate: firstDay) }
+            let safeProject = project.name.replacingOccurrences(of: " ", with: "_")
+            let start = DateDurationService.isoDateFormatter.string(from: firstDay)
+            let end = DateDurationService.isoDateFormatter.string(from: lastDay)
+            return start == end ? "\(safeProject)_\(start).pdf" : "\(safeProject)_\(start)_to_\(end).pdf"
+        }
+
+        /// Prefix for CSV filenames, e.g. "SignMe_2026-10-05_to_2026-10-11".
+        var csvPrefix: String {
+            let start = DateDurationService.isoDateFormatter.string(from: firstDay)
+            let end = DateDurationService.isoDateFormatter.string(from: lastDay)
+            return start == end ? "SignMe_\(start)" : "SignMe_\(start)_to_\(end)"
+        }
+    }
+
+    /// Entries of `project` within `period`.
+    static func entries(of project: Project, in period: ExportPeriod) -> [WorkEntry] {
+        project.entries.filter { period.contains($0.date) }
+    }
+
+    /// One signed PDF timesheet per project for any period, shared together.
+    static func periodExportPDFURLs(
+        projects: [Project],
+        period: ExportPeriod,
+        settings: TimesheetSettings = .current,
+        signature: SignatureStamp? = nil
+    ) -> [URL]? {
         let rendered: [(data: Data, filename: String)] = projects.compactMap { project -> (data: Data, filename: String)? in
             guard let job = project.job else { return nil }
-            let monthEntries = ExportService.entries(of: project, inMonthOf: monthDate)
-            guard !monthEntries.isEmpty else { return nil }
+            let periodEntries = ExportService.entries(of: project, in: period)
+            guard !periodEntries.isEmpty else { return nil }
             let data = monthExportPDFData(
                 job: job,
                 project: project,
-                monthDate: monthDate,
-                entries: monthEntries,
+                monthDate: period.firstDay,
+                entries: periodEntries,
                 settings: settings,
-                signature: signature
+                signature: signature,
+                periodLabel: period.label
             )
-            return (data: data, filename: monthPDFFilename(project: project, monthDate: monthDate))
+            return (data: data, filename: period.pdfFilename(for: project))
         }
         guard !rendered.isEmpty else { return nil }
         let names = uniqueFilenames(rendered.map(\.filename))
@@ -201,11 +278,12 @@ enum ExportService {
         entries: [WorkEntry],
         settings: TimesheetSettings = .current,
         signature: SignatureStamp? = nil,
+        periodLabel: String? = nil,
         generatedAt: Date = .now
     ) -> Data {
         let sortedEntries = entries.sorted { $0.startTime < $1.startTime }
         let totalHours = entries.reduce(0) { $0 + $1.durationHours }
-        let monthLabel = DateDurationService.monthYearFormatter.string(from: monthDate)
+        let monthLabel = periodLabel ?? DateDurationService.monthYearFormatter.string(from: monthDate)
         let titleText = settings.signerName.isEmpty ? "Timesheet" : settings.signerName
         let subtitleText = "\(job.name) · \(project.name) · \(monthLabel)"
 

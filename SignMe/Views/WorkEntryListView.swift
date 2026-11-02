@@ -35,7 +35,6 @@ struct WorkEntryListView: View {
 
     @State private var viewMode: ViewMode = .list
     @State private var calendarMonth: Date = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
-    @State private var calendarSelectedDay: Date = .now
     @State private var addEntryDate: AddEntryDate?
     @State private var showingExportMonth = false
 
@@ -73,13 +72,7 @@ struct WorkEntryListView: View {
             }
 
             if viewMode == .calendar && !selectionMode {
-                MonthCalendarView(
-                    project: project,
-                    month: $calendarMonth,
-                    selectedDay: $calendarSelectedDay,
-                    onAdd: { day in addEntryDate = AddEntryDate(date: day) },
-                    onEdit: { entry in entryToEdit = entry }
-                )
+                WorkCalendarView(project: project)
             } else if project.entries.isEmpty {
                 EmptyStateView(
                     icon: "clock.badge.questionmark",

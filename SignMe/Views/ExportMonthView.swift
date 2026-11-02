@@ -13,6 +13,11 @@ struct ExportMonthSheet: View {
         case multiple = "Several projects"
     }
 
+    enum Format: String, CaseIterable {
+        case pdf = "Signed PDF"
+        case csv = "Spreadsheet (CSV)"
+    }
+
     @Environment(\.dismiss) private var dismiss
     let jobs: [Job]
 
@@ -23,6 +28,9 @@ struct ExportMonthSheet: View {
     @AppStorage("export.lastMode") private var lastModeRaw = Mode.single.rawValue
 
     @State private var mode: Mode
+    @State private var format: Format = .pdf
+    /// Set when opened for a specific range of days (e.g. from the calendar); nil = month picker.
+    private let fixedPeriod: ExportService.ExportPeriod?
     @State private var selectedProject: Project?
     @State private var selectedProjectIDs: Set<UUID> = []
     @State private var month: Date
@@ -35,15 +43,32 @@ struct ExportMonthSheet: View {
     @State private var shareItem: ShareItem?
     @State private var showingSignatures = false
 
-    init(jobs: [Job], initialProject: Project? = nil, initialMonth: Date = .now) {
+    init(jobs: [Job], initialProject: Project? = nil, initialMonth: Date = .now, period: ExportService.ExportPeriod? = nil) {
         self.jobs = jobs
+        self.fixedPeriod = period
         let calendar = Calendar.current
-        _month = State(initialValue: calendar.dateInterval(of: .month, for: initialMonth)?.start ?? initialMonth)
+        let monthSource = period?.firstDay ?? initialMonth
+        _month = State(initialValue: calendar.dateInterval(of: .month, for: monthSource)?.start ?? monthSource)
         let allProjects = jobs.flatMap(\.projects)
         _selectedProject = State(initialValue: initialProject ?? (allProjects.count == 1 ? allProjects.first : nil))
-        // Opened from a specific project → single; otherwise reuse the last mode.
+        // Opened from a specific project → single. Opened for a range with several
+        // active projects → several. Otherwise reuse the last mode.
         let remembered = Mode(rawValue: UserDefaults.standard.string(forKey: "export.lastMode") ?? "") ?? .single
-        _mode = State(initialValue: initialProject != nil || allProjects.count < 2 ? .single : remembered)
+        let initialMode: Mode
+        if initialProject != nil || allProjects.count < 2 {
+            initialMode = .single
+        } else if let period {
+            let active = allProjects.filter { !ExportService.entries(of: $0, in: period).isEmpty }
+            initialMode = active.count > 1 ? .multiple : .single
+            if active.count == 1 { _selectedProject = State(initialValue: active.first) }
+        } else {
+            initialMode = remembered
+        }
+        _mode = State(initialValue: initialMode)
+    }
+
+    private var period: ExportService.ExportPeriod {
+        fixedPeriod ?? .month(month)
     }
 
     // MARK: - Derived
@@ -56,11 +81,12 @@ struct ExportMonthSheet: View {
 
     private var matchingEntries: [WorkEntry] {
         guard let project = selectedProject else { return [] }
-        return ExportService.entries(of: project, inMonthOf: month)
+        return ExportService.entries(of: project, in: period)
     }
 
+    /// Hours of `project` in the chosen period (month or range).
     private func monthHours(_ project: Project) -> Double {
-        ExportService.entries(of: project, inMonthOf: month).reduce(0) { $0 + $1.durationHours }
+        ExportService.entries(of: project, in: period).reduce(0) { $0 + $1.durationHours }
     }
 
     /// Ticked projects that actually have hours this month, in list order.
@@ -102,6 +128,7 @@ struct ExportMonthSheet: View {
     }
 
     private var exportButtonTitle: String {
+        if format == .csv { return "Export CSV" }
         let signed = activeSignature != nil
         switch mode {
         case .single:
@@ -129,7 +156,7 @@ struct ExportMonthSheet: View {
                 }
             }
             .themedScreen()
-            .navigationTitle("Export month")
+            .navigationTitle(fixedPeriod == nil ? "Export month" : "Export")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -169,9 +196,23 @@ struct ExportMonthSheet: View {
                     .pickerStyle(.segmented)
                 }
                 summarySection
-                signatureSection
-                dateSection
-                preview
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel("Format")
+                    Picker("Format", selection: $format.animation(.easeInOut(duration: 0.2))) {
+                        ForEach(Format.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    if format == .csv {
+                        Text("One spreadsheet file with every entry of the chosen \(mode == .multiple ? "projects" : "project"), including job and project columns.")
+                            .font(.app(.footnote))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                if format == .pdf {
+                    signatureSection
+                    dateSection
+                    preview
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -232,7 +273,27 @@ struct ExportMonthSheet: View {
         }
     }
 
+    @ViewBuilder
     private var monthSelector: some View {
+        if let fixedPeriod {
+            VStack(spacing: 2) {
+                Text(fixedPeriod.label)
+                    .font(Theme.display(.headline))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(monthSubtitle)
+                    .font(.app(.footnote))
+                    .foregroundStyle(canExport ? Theme.textSecondary : Theme.textTertiary)
+                    .monospacedDigit()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .card(padding: 6, radius: 16)
+        } else {
+            monthStepper
+        }
+    }
+
+    private var monthStepper: some View {
         HStack {
             Button { shiftMonth(-1) } label: {
                 Image(systemName: "chevron.left").frame(width: 44, height: 44)
@@ -309,7 +370,7 @@ struct ExportMonthSheet: View {
                     .font(.app(.footnote))
                     .foregroundStyle(Theme.textSecondary)
             } else if projectsWithHours.isEmpty {
-                Text("No project has hours in this month.")
+                Text(fixedPeriod == nil ? "No project has hours in this month." : "No project has hours in these days.")
                     .font(.app(.footnote))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -548,31 +609,26 @@ struct ExportMonthSheet: View {
 
     private func export() {
         guard canExport else { return }
+
+        if format == .csv {
+            let entries: [WorkEntry] = mode == .multiple
+                ? selectedProjects.flatMap { ExportService.entries(of: $0, in: period) }
+                : matchingEntries
+            shareItem = ShareItem(ExportService.csvExportURL(entries: entries, filenamePrefix: period.csvPrefix))
+            return
+        }
+
         let signature = activeSignature
         if changingSignature || defaultSignature == nil, useAsDefault, let signature {
             defaultSignatureID = signature.id.uuidString
         }
         let stamp = signature.map { ExportService.SignatureStamp(image: $0.image, dateText: dateText) }
-
-        if mode == .multiple {
-            shareItem = ShareItem(urls: ExportService.monthExportPDFURLs(
-                projects: selectedProjects,
-                monthDate: month,
-                signature: stamp
-            ))
-            return
-        }
-
-        guard let project = selectedProject, let job = project.job else { return }
-        shareItem = ShareItem(
-            ExportService.monthExportPDFURL(
-                job: job,
-                project: project,
-                monthDate: month,
-                entries: matchingEntries,
-                signature: stamp
-            )
-        )
+        let projects: [Project] = mode == .multiple ? selectedProjects : [selectedProject].compactMap { $0 }
+        shareItem = ShareItem(urls: ExportService.periodExportPDFURLs(
+            projects: projects,
+            period: period,
+            signature: stamp
+        ))
     }
 }
 

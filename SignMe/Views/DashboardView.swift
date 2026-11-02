@@ -7,6 +7,7 @@ struct DashboardView: View {
     @Environment(TimerStore.self) private var timer
     @Query(sort: \Job.createdAt) private var jobs: [Job]
     @Query(sort: \WorkEntry.date, order: .reverse) private var allEntries: [WorkEntry]
+    @Query(sort: \RecurringShift.createdAt) private var shifts: [RecurringShift]
 
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
     @AppStorage(AppSettings.Keys.lastProjectID) private var lastProjectID = AppSettings.Defaults.lastProjectID
@@ -27,6 +28,7 @@ struct DashboardView: View {
                 timerCard
                 targetCard
                 weekCard
+                calendarCard
                 recentSection
             }
             .padding(.horizontal, 20)
@@ -410,6 +412,67 @@ struct DashboardView: View {
             .frame(height: 120)
         }
         .card(padding: 16, radius: 22)
+    }
+
+    // MARK: - Calendar
+
+    /// A mini month heat map; opens the full work calendar.
+    private var calendarCard: some View {
+        let calendar = Calendar.current
+        let monthStart = calendar.dateInterval(of: .month, for: .now)?.start ?? .now
+        let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+        let leading = (calendar.component(.weekday, from: monthStart) - calendar.firstWeekday + 7) % 7
+        let byDay = CalendarService.entriesByDay(allEntries, in: monthStart)
+        let today = calendar.component(.day, from: .now)
+        let daysWorked = byDay.values.filter { $0.reduce(0) { $0 + $1.durationHours } > 0 }.count
+        let projectIDs = Set(allProjects.map(\.id))
+        let pendingToday = CalendarService.pendingShifts(shifts, on: .now, entries: allEntries, projectIDs: projectIDs).count
+        let cells: [Int?] = Array(repeating: nil, count: leading) + (1...dayCount).map { Optional($0) }
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+
+        return NavigationLink {
+            WorkCalendarScreen()
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionLabel("Calendar")
+                    Text("\(daysWorked) \(daysWorked == 1 ? "day" : "days") worked")
+                        .font(.app(.footnote))
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.app(.footnote, .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                LazyVGrid(columns: columns, spacing: 4) {
+                    ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
+                        if let day {
+                            let hours = (byDay[day] ?? []).reduce(0) { $0 + $1.durationHours }
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(hours > 0 ? Theme.goldFill.opacity(0.25 + min(hours, 6) / 6 * 0.75) : Theme.dayEmpty)
+                                .frame(height: 16)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .strokeBorder(day == today ? Theme.gold : Color.clear, lineWidth: 1.5)
+                                )
+                        } else {
+                            Color.clear.frame(height: 16)
+                        }
+                    }
+                }
+                .accessibilityHidden(true)
+                if pendingToday > 0 {
+                    Label("\(pendingToday) regular \(pendingToday == 1 ? "shift" : "shifts") to confirm today", systemImage: "checkmark.circle")
+                        .font(.app(.footnote, .semibold))
+                        .foregroundStyle(Theme.gold)
+                }
+            }
+            .card(padding: 16, radius: 22)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Calendar, \(daysWorked) days worked this month")
+        .accessibilityHint("Opens the work calendar")
     }
 
     // MARK: - Recent

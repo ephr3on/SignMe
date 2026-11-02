@@ -15,6 +15,8 @@ enum AppSettings {
         static let defaultSignatureID = "signature.defaultID"
         /// `AppTheme` raw value: "light" (default), "dark" or "system".
         static let theme = "appearance.theme"
+        /// Weekly hours limit for calendar warnings; 0 = off.
+        static let weeklyLimitHours = "goal.weeklyLimitHours"
     }
 
     enum Defaults {
@@ -25,6 +27,7 @@ enum AppSettings {
         static let lastProjectID = ""
         static let defaultSignatureID = ""
         static let theme = AppTheme.light.rawValue
+        static let weeklyLimitHours = 0.0
     }
 }
 

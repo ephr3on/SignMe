@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Query private var jobs: [Job]
     @Query private var allEntries: [WorkEntry]
     @Query(sort: \SavedSignature.createdAt) private var signatures: [SavedSignature]
+    @Query private var shifts: [RecurringShift]
 
     @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
@@ -38,8 +39,18 @@ struct SettingsView: View {
                     SettingsRow(
                         icon: "target",
                         tint: Color(hex: 0x2E8B62),
-                        title: "Monthly target",
+                        title: "Targets & limits",
                         value: monthlyTarget > 0 ? "\(Int(monthlyTarget)) h" : "Off"
+                    )
+                }
+                NavigationLink {
+                    ShiftTemplatesView()
+                } label: {
+                    SettingsRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        tint: Color(hex: 0xC2643A),
+                        title: "Regular shifts",
+                        value: shifts.isEmpty ? "None" : "\(shifts.count)"
                     )
                 }
             } header: {
@@ -252,6 +263,22 @@ struct MonthlyTargetSettingsView: View {
         )
     }
 
+    @AppStorage(AppSettings.Keys.weeklyLimitHours) private var weeklyLimit = AppSettings.Defaults.weeklyLimitHours
+
+    private var limitOn: Binding<Bool> {
+        Binding(
+            get: { weeklyLimit > 0 },
+            set: { weeklyLimit = $0 ? 20 : 0 }
+        )
+    }
+
+    private var limitHours: Binding<Int> {
+        Binding(
+            get: { max(1, Int(weeklyLimit.rounded())) },
+            set: { weeklyLimit = Double($0) }
+        )
+    }
+
     var body: some View {
         Form {
             Section {
@@ -269,15 +296,40 @@ struct MonthlyTargetSettingsView: View {
                         }
                     }
                 }
+            } header: {
+                SettingsHeader("Monthly target")
             } footer: {
                 Text("The dashboard shows how close you are to this goal and how much is left per workday.")
+                    .font(.app(.footnote))
+            }
+            .themedRow()
+
+            Section {
+                Toggle("Warn about long weeks", isOn: limitOn)
+                    .font(.app(.body))
+                if weeklyLimit > 0 {
+                    Stepper(value: limitHours, in: 1...80) {
+                        HStack {
+                            Text("Hours per week")
+                            Spacer()
+                            Text("\(limitHours.wrappedValue) h")
+                                .font(.app(.body, .bold))
+                                .foregroundStyle(Theme.gold)
+                                .monospacedDigit()
+                        }
+                    }
+                }
+            } header: {
+                SettingsHeader("Weekly limit")
+            } footer: {
+                Text("The calendar flags any week above this, e.g. the 20 hours a week many student jobs allow during the semester.")
                     .font(.app(.footnote))
             }
             .themedRow()
         }
         .themedScreen()
         .tabBarSpace()
-        .navigationTitle("Monthly target")
+        .navigationTitle("Targets & limits")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -390,6 +442,7 @@ struct DataSettingsView: View {
         for signature in signatures {
             modelContext.delete(signature)
         }
+        try? modelContext.delete(model: RecurringShift.self)
         defaultSignatureID = ""
         try? modelContext.save()
     }
