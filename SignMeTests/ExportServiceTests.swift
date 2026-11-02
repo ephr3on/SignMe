@@ -72,6 +72,44 @@ final class ExportServiceTests: XCTestCase {
         XCTAssertTrue(text.contains("supervisor"))
     }
 
+    func testUniqueFilenames() {
+        XCTAssertEqual(
+            ExportService.uniqueFilenames(["A_May_2026.pdf", "B_May_2026.pdf", "a_may_2026.pdf", "A_May_2026.pdf"]),
+            ["A_May_2026.pdf", "B_May_2026.pdf", "a_may_2026 (2).pdf", "A_May_2026 (3).pdf"]
+        )
+    }
+
+    func testSeveralProjectsExportOnePDFEachSkippingEmpty() throws {
+        let calendar = Calendar.current
+        let monthDate = calendar.date(from: DateComponents(year: 2026, month: 10, day: 1))!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 10, day: 6, hour: 9))!
+        let job = Job(name: "Studienkolleg")
+
+        func project(_ name: String, withEntry: Bool) -> Project {
+            let project = Project(name: name)
+            project.job = job
+            if withEntry {
+                let entry = WorkEntry(date: start, startTime: start, endTime: start.addingTimeInterval(7200), taskDescription: "Work")
+                project.entries = [entry]
+            }
+            return project
+        }
+
+        let urls = try XCTUnwrap(ExportService.monthExportPDFURLs(
+            projects: [project("Tutoring", withEntry: true), project("Office", withEntry: true), project("Empty", withEntry: false)],
+            monthDate: monthDate,
+            settings: TimesheetSettings(signerName: "Test", organization: "", includeSupervisorSignature: true),
+            signature: ExportService.SignatureStamp(image: nil, dateText: "31.10.2026")
+        ))
+        XCTAssertEqual(urls.count, 2)
+        XCTAssertEqual(Set(urls.map(\.lastPathComponent)).count, 2)
+        for url in urls {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+            let document = try XCTUnwrap(PDFDocument(url: url))
+            XCTAssertTrue((document.string ?? "").contains("31.10.2026"), "Every PDF carries its own signature date")
+        }
+    }
+
     func testMonthPDFIncludesSignatureDate() throws {
         let job = Job(name: "Studienkolleg")
         let project = Project(name: "Tutoring")

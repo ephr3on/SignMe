@@ -60,6 +60,12 @@ enum ExportService {
     /// Writes `data` into the app's temp export folder and returns its URL.
     /// Only the most recent export is kept, so temp files never pile up.
     static func writeExportFile(data: Data, filename: String) -> URL? {
+        writeExportFiles([(data: data, filename: filename)])?.first
+    }
+
+    /// Writes several files of one export together (the folder is cleared once,
+    /// before the first file). Returns nil if any file can't be written.
+    static func writeExportFiles(_ files: [(data: Data, filename: String)]) -> [URL]? {
         let fileManager = FileManager.default
         let directory = exportDirectory
         do {
@@ -67,11 +73,27 @@ enum ExportService {
                 try? fileManager.removeItem(at: directory)
             }
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-            let url = directory.appendingPathComponent(sanitizedFilename(filename))
-            try data.write(to: url, options: .atomic)
-            return url
+            return try files.map { file in
+                let url = directory.appendingPathComponent(sanitizedFilename(file.filename))
+                try file.data.write(to: url, options: .atomic)
+                return url
+            }
         } catch {
             return nil
+        }
+    }
+
+    /// Makes every filename in the list unique by adding " (2)", " (3)"… before the extension.
+    static func uniqueFilenames(_ names: [String]) -> [String] {
+        var seen: [String: Int] = [:]
+        return names.map { name in
+            let key = name.lowercased()
+            let count = (seen[key] ?? 0) + 1
+            seen[key] = count
+            guard count > 1 else { return name }
+            let ext = (name as NSString).pathExtension
+            let stem = (name as NSString).deletingPathExtension
+            return ext.isEmpty ? "\(stem) (\(count))" : "\(stem) (\(count)).\(ext)"
         }
     }
 
@@ -123,10 +145,49 @@ enum ExportService {
             signature: signature
         )
 
+        return writeExportFile(data: data, filename: monthPDFFilename(project: project, monthDate: monthDate))
+    }
+
+    /// "ProjectName_Month_Year.pdf"
+    static func monthPDFFilename(project: Project, monthDate: Date) -> String {
         let monthName = DateDurationService.monthNameFormatter.string(from: monthDate)
         let year = Calendar.current.component(.year, from: monthDate)
         let safeProject = project.name.replacingOccurrences(of: " ", with: "_")
-        return writeExportFile(data: data, filename: "\(safeProject)_\(monthName)_\(year).pdf")
+        return "\(safeProject)_\(monthName)_\(year).pdf"
+    }
+
+    /// Entries of `project` that fall in the month of `monthDate`.
+    static func entries(of project: Project, inMonthOf monthDate: Date, calendar: Calendar = .current) -> [WorkEntry] {
+        project.entries.filter { calendar.isDate($0.date, equalTo: monthDate, toGranularity: .month) }
+    }
+
+    /// Writes one signed PDF timesheet per project for the same month, all in one go.
+    /// Projects without entries that month are skipped. Each PDF carries its own
+    /// signature and date. Same-named projects get " (2)"-style filenames.
+    /// Returns nil if nothing could be exported.
+    static func monthExportPDFURLs(
+        projects: [Project],
+        monthDate: Date,
+        settings: TimesheetSettings = .current,
+        signature: SignatureStamp? = nil
+    ) -> [URL]? {
+        let rendered: [(data: Data, filename: String)] = projects.compactMap { project -> (data: Data, filename: String)? in
+            guard let job = project.job else { return nil }
+            let monthEntries = ExportService.entries(of: project, inMonthOf: monthDate)
+            guard !monthEntries.isEmpty else { return nil }
+            let data = monthExportPDFData(
+                job: job,
+                project: project,
+                monthDate: monthDate,
+                entries: monthEntries,
+                settings: settings,
+                signature: signature
+            )
+            return (data: data, filename: monthPDFFilename(project: project, monthDate: monthDate))
+        }
+        guard !rendered.isEmpty else { return nil }
+        let names = uniqueFilenames(rendered.map(\.filename))
+        return writeExportFiles(zip(rendered, names).map { (data: $0.0.data, filename: $0.1) })
     }
 
     /// Renders an A4 PDF of one project's entries for a single month: a header with
