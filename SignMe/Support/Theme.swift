@@ -26,57 +26,57 @@ enum AppTheme: String, CaseIterable, Identifiable {
     }
 }
 
-/// SignMe's visual language, taken from the app icon, in two variants:
-/// - Light (default): warm off-white paper, white cards, navy ink, deep-gold accents.
-/// - Dark: deep navy surfaces with bright gold accents.
-/// Every token adapts automatically to the active appearance.
+/// SignMe's design tokens. Colors come from the active `ThemePalette`
+/// (chosen in Settings › Appearance › Theme) and adapt automatically to light/dark.
+/// Because each accessor reads `ThemeManager.shared.palette`, SwiftUI's Observation
+/// redraws every view that uses a color as soon as the theme changes.
+///
+/// Naming: `gold` = the theme's accent (it was gold in the original design).
 enum Theme {
     // MARK: Colors
 
-    static let background = adaptive(light: 0xF5F2EA, dark: 0x0B1628)
-    static let backgroundDeep = adaptive(light: 0xEDE8DC, dark: 0x060E1B)
-    static let tabBar = adaptive(light: 0xFFFFFF, dark: 0x0E1B31)
-    static let surface = adaptive(light: 0xFFFFFF, dark: 0x13223A)
-    static let surfaceRaised = adaptive(light: 0xEEE9DD, dark: 0x1A2B48)
-    static let track = adaptive(light: 0xE6E0D2, dark: 0x22365A)
-    static let bar = adaptive(light: 0xAFBDD4, dark: 0x2C4470)
+    static var background: Color { color(\.background) }
+    static var backgroundDeep: Color { color(\.backgroundDeep) }
+    static var tabBar: Color { color(\.tabBar) }
+    static var surface: Color { color(\.surface) }
+    static var surfaceRaised: Color { color(\.surfaceRaised) }
+    static var track: Color { color(\.track) }
+    static var bar: Color { color(\.bar) }
     /// Empty calendar days.
-    static let dayEmpty = adaptive(light: 0xEFEBE1, dark: 0x101D33)
-    /// Gold for text, icons and outlines (darker in light mode so it stays readable).
-    static let gold = adaptive(light: 0x7A5C12, dark: 0xD4AF37)
-    static let goldBright = adaptive(light: 0x8A6714, dark: 0xE8C964)
-    /// Gold for filled shapes: buttons, the + button, selected chips, chart highlights.
-    static let goldFill = Color(hex: 0xD4AF37)
+    static var dayEmpty: Color { color(\.dayEmpty) }
+    /// Accent for text, icons and outlines (readable on every surface).
+    static var gold: Color { color(\.accent) }
+    static var goldBright: Color { color(\.accentBright) }
+    /// Accent for filled shapes: buttons, the + button, selected chips, chart highlights.
+    static var goldFill: Color { color(\.accentFill) }
     /// Text and icons placed on `goldFill`.
-    static let onGold = Color(hex: 0x0B1628)
-    static let textPrimary = adaptive(light: 0x1B2333, dark: 0xF3EEDF)
-    static let textSecondary = adaptive(light: 0x596273, dark: 0xA9B4C8)
-    static let textTertiary = adaptive(light: 0x626A7A, dark: 0x8C98AE)
-    static let success = adaptive(light: 0x27704F, dark: 0x5FD3A0)
-    static let warning = adaptive(light: 0x86580D, dark: 0xF2B45A)
-    static let danger = adaptive(light: 0xA83E1B, dark: 0xFF8A7A)
+    static var onGold: Color { color(\.onAccent) }
+    static var textPrimary: Color { color(\.textPrimary) }
+    static var textSecondary: Color { color(\.textSecondary) }
+    static var textTertiary: Color { color(\.textTertiary) }
+    static var success: Color { color(\.success) }
+    static var warning: Color { color(\.warning) }
+    static var danger: Color { color(\.danger) }
+    static var hairline: Color { color(\.hairline) }
+    /// Thin outline around cards — only visible in light mode, where white cards sit on tinted backgrounds.
+    static var cardBorder: Color { color(\.cardBorder) }
+
+    /// Signatures and the PDF preview always sit on paper, whatever the theme.
     static let paper = Color(hex: 0xFBF8F1)
     static let paperLine = Color(hex: 0xB9B09C)
-    static let hairline = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark ? UIColor.white.withAlphaComponent(0.08) : UIColor.black.withAlphaComponent(0.08)
-    })
-    /// Thin outline around cards — only visible in light mode, where white cards sit on off-white.
-    static let cardBorder = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark ? .clear : UIColor.black.withAlphaComponent(0.06)
-    })
 
     /// Ink used for drawn signatures (dark blue, like a ballpoint pen).
     static let inkUIColor = UIColor(red: 0x1B / 255, green: 0x2B / 255, blue: 0x6B / 255, alpha: 1)
 
-    /// A color that switches between a light-mode and a dark-mode hex value.
-    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
-        Color(uiColor: adaptiveUIColor(light: light, dark: dark))
+    /// A SwiftUI color for one token of the active palette, switching with light/dark.
+    static func color(_ token: KeyPath<ThemeTokens, UIColor>) -> Color {
+        Color(uiColor: uiColor(token))
     }
 
-    private static func adaptiveUIColor(light: UInt32, dark: UInt32) -> UIColor {
-        UIColor { traits in
-            UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
-        }
+    /// The UIKit version (reads the palette now, so Observation tracks it in SwiftUI bodies).
+    static func uiColor(_ token: KeyPath<ThemeTokens, UIColor>) -> UIColor {
+        let palette = ThemeManager.shared.palette
+        return UIColor { traits in palette.tokens(for: traits)[keyPath: token] }
     }
 
     // MARK: Type
@@ -90,13 +90,21 @@ enum Theme {
 
     // MARK: UIKit appearance
 
+    /// Selected segment: white in light mode, a raised surface in dark mode.
+    private static var segmentSelectedColor: UIColor {
+        let palette = ThemeManager.shared.palette
+        return UIColor { traits in
+            traits.userInterfaceStyle == .dark ? palette.dark.surfaceRaised : palette.light.surface
+        }
+    }
+
     /// Navigation bars and segmented controls in the theme colors (adapting to light/dark).
-    /// Called once at launch.
+    /// Called at launch and again whenever the theme changes.
     static func configureAppearance() {
-        let backgroundUI = adaptiveUIColor(light: 0xF5F2EA, dark: 0x0B1628)
-        let textPrimaryUI = adaptiveUIColor(light: 0x1B2333, dark: 0xF3EEDF)
-        let textSecondaryUI = adaptiveUIColor(light: 0x596273, dark: 0xA9B4C8)
-        let goldUI = adaptiveUIColor(light: 0x7A5C12, dark: 0xD4AF37)
+        let backgroundUI = uiColor(\.background)
+        let textPrimaryUI = uiColor(\.textPrimary)
+        let textSecondaryUI = uiColor(\.textSecondary)
+        let goldUI = uiColor(\.accent)
 
         let navigation = UINavigationBarAppearance()
         navigation.configureWithOpaqueBackground()
@@ -126,8 +134,8 @@ enum Theme {
         UITabBar.appearance().isHidden = true
 
         let segmented = UISegmentedControl.appearance()
-        segmented.selectedSegmentTintColor = adaptiveUIColor(light: 0xFFFFFF, dark: 0x22365A)
-        segmented.backgroundColor = adaptiveUIColor(light: 0xE6E0D2, dark: 0x13223A)
+        segmented.selectedSegmentTintColor = segmentSelectedColor
+        segmented.backgroundColor = uiColor(\.track)
         segmented.setTitleTextAttributes([
             .foregroundColor: textSecondaryUI,
             .font: AppFonts.uiFont(AppFonts.sans(.medium), size: 14, textStyle: .subheadline)
@@ -136,6 +144,38 @@ enum Theme {
             .foregroundColor: textPrimaryUI,
             .font: AppFonts.uiFont(AppFonts.sans(.bold), size: 14, textStyle: .subheadline)
         ], for: .selected)
+    }
+
+    /// Appearance proxies only affect views created later, so after a theme change
+    /// re-style the navigation bars and segmented controls that are already on screen.
+    static func refreshExistingUIKitViews() {
+        let navigationProxy = UINavigationBar.appearance()
+        let segmentedProxy = UISegmentedControl.appearance()
+        let normalAttributes = segmentedProxy.titleTextAttributes(for: .normal)
+        let selectedAttributes = segmentedProxy.titleTextAttributes(for: .selected)
+
+        func visit(_ view: UIView) {
+            if let bar = view as? UINavigationBar {
+                bar.standardAppearance = navigationProxy.standardAppearance
+                bar.scrollEdgeAppearance = navigationProxy.scrollEdgeAppearance
+                bar.compactAppearance = navigationProxy.compactAppearance
+                bar.tintColor = navigationProxy.tintColor
+            } else if let control = view as? UISegmentedControl {
+                control.selectedSegmentTintColor = segmentedProxy.selectedSegmentTintColor
+                control.backgroundColor = segmentedProxy.backgroundColor
+                control.setTitleTextAttributes(normalAttributes, for: .normal)
+                control.setTitleTextAttributes(selectedAttributes, for: .selected)
+            }
+            view.subviews.forEach(visit)
+        }
+
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                visit(window)
+                window.tintColor = uiColor(\.accent)
+            }
+        }
     }
 }
 

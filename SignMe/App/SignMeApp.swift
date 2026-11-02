@@ -14,23 +14,32 @@ struct SignMeApp: App {
     }()
 
     @State private var timerStore = TimerStore()
-    @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
 
     init() {
         AppFonts.register()
         Theme.configureAppearance()
     }
 
-    private var theme: AppTheme { AppTheme(rawValue: themeRawValue) ?? .light }
-
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environment(timerStore)
-                .preferredColorScheme(theme.colorScheme)
-                .tint(Theme.gold)
-                .font(.app(.body))
         }
         .modelContainer(modelContainer)
+    }
+}
+
+/// Applies the user's appearance (Light/Dark/System), theme accent and app font.
+/// Lives in a View (not the Scene) so it redraws immediately when the theme changes.
+private struct RootView: View {
+    @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
+
+    private var appearance: AppTheme { AppTheme(rawValue: themeRawValue) ?? .light }
+
+    var body: some View {
+        ContentView()
+            .preferredColorScheme(appearance.colorScheme)
+            .tint(Theme.gold)
+            .font(.app(.body))
     }
 }

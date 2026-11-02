@@ -21,7 +21,8 @@ struct SettingsView: View {
                 } label: {
                     SettingsRow(
                         icon: "person.text.rectangle",
-                        tint: Theme.gold,
+                        tint: Theme.goldFill,
+                        iconColor: Theme.onGold,
                         title: "Timesheet details",
                         value: signerName.isEmpty ? "Add your name" : signerName
                     )
@@ -47,21 +48,20 @@ struct SettingsView: View {
             .themedRow()
 
             Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    SettingsRow(icon: "circle.lefthalf.filled", tint: Color(hex: 0x6B5BA8), title: "Theme", value: nil)
-                    Picker("Theme", selection: $themeRawValue) {
-                        ForEach(AppTheme.allCases) { theme in
-                            Text(theme.title).tag(theme.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                NavigationLink {
+                    ThemeSettingsView()
+                } label: {
+                    SettingsRow(
+                        icon: "paintpalette",
+                        tint: Color(hex: 0x6B5BA8),
+                        title: "Theme & mode",
+                        value: "\(ThemeManager.shared.preset.title) · \((AppTheme(rawValue: themeRawValue) ?? .light).title)"
+                    )
                 }
-                .padding(.vertical, 4)
             } header: {
                 SettingsHeader("Appearance")
             } footer: {
-                Text("Light is easiest on the eyes in daylight; Dark suits evenings. System follows your iPhone.")
+                Text("Choose from ready-made themes or create your own, each in light and dark.")
                     .font(.app(.footnote))
             }
             .themedRow()
@@ -131,6 +131,7 @@ struct SettingsView: View {
 struct SettingsRow: View {
     let icon: String
     let tint: Color
+    var iconColor: Color = .white
     let title: String
     let value: String?
 
@@ -138,7 +139,7 @@ struct SettingsRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(iconColor)
                 .frame(width: 30, height: 30)
                 .background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)

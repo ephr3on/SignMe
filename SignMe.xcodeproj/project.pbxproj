@@ -10,6 +10,7 @@
 		018D9564E1B43623E9F8BA9B /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */; };
 		3A79AFB275847496E58BBEE5 /* TimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C7B984CD999DDBD000BC63 /* TimerStore.swift */; };
 		0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF109843F3D7D055E92BC25 /* DashboardView.swift */; };
+		AC2D0BB802E3B3A1EE225E19 /* ThemeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 419A2E75E616BE969790B07E /* ThemeSettingsView.swift */; };
 		4113B3EBCEEEFC67A226F35F /* MonthCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B840A0D25C6731BE754A82E7 /* MonthCalendarView.swift */; };
 		A99AB27FC3B8023D3C9AEC97 /* ExportMonthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B4D9D13AB9C0DD7E176F12 /* ExportMonthView.swift */; };
 		2CD2FA6F9366482D66931D32 /* SignaturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7381C8FFD88E0FB8508F028F /* SignaturesView.swift */; };
@@ -19,6 +20,7 @@
 		3D02A745BF97DED275FAA54E /* WorkEntryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43B8DDBC2BBEA4B699D49F0 /* WorkEntryListView.swift */; };
 		44DBFDEEF21CFAD96C813C5C /* SignMeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705750FA00D5D56A066817B /* SignMeApp.swift */; };
 		524BF5FB64FD3A9A250F5232 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D99162304D7B038A09099 /* PreviewSupport.swift */; };
+		38F7DF71126844425DB22FD5 /* ThemePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = D614CC782453C294AA25E237 /* ThemePalette.swift */; };
 		7782C5F5F4C72EF04F5FEF62 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93FC865052DDD7A41477B4F0 /* Theme.swift */; };
 		0D4B62633A24B006A182C81E /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F5310E462D0397476E811E /* AppSettings.swift */; };
 		5306540C4DC29AF689D574F8 /* NameEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A9D2E584FDB6607485EC7 /* NameEntrySheet.swift */; };
@@ -66,11 +68,13 @@
 		421EC1259296F12DD841422B /* WorkEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkEntry.swift; sourceTree = "<group>"; };
 		A7174D660AB76F7CE045707F /* SavedSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSignature.swift; sourceTree = "<group>"; };
 		484D99162304D7B038A09099 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
+		D614CC782453C294AA25E237 /* ThemePalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePalette.swift; sourceTree = "<group>"; };
 		93FC865052DDD7A41477B4F0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		32F5310E462D0397476E811E /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		C3C7B984CD999DDBD000BC63 /* TimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStore.swift; sourceTree = "<group>"; };
 		5EF109843F3D7D055E92BC25 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		419A2E75E616BE969790B07E /* ThemeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsView.swift; sourceTree = "<group>"; };
 		B840A0D25C6731BE754A82E7 /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
 		B2B4D9D13AB9C0DD7E176F12 /* ExportMonthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportMonthView.swift; sourceTree = "<group>"; };
 		7381C8FFD88E0FB8508F028F /* SignaturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignaturesView.swift; sourceTree = "<group>"; };
@@ -165,6 +169,7 @@
 			isa = PBXGroup;
 			children = (
 				484D99162304D7B038A09099 /* PreviewSupport.swift */,
+				D614CC782453C294AA25E237 /* ThemePalette.swift */,
 				93FC865052DDD7A41477B4F0 /* Theme.swift */,
 				32F5310E462D0397476E811E /* AppSettings.swift */,
 			);
@@ -190,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				5EF109843F3D7D055E92BC25 /* DashboardView.swift */,
+				419A2E75E616BE969790B07E /* ThemeSettingsView.swift */,
 				B840A0D25C6731BE754A82E7 /* MonthCalendarView.swift */,
 				B2B4D9D13AB9C0DD7E176F12 /* ExportMonthView.swift */,
 				7381C8FFD88E0FB8508F028F /* SignaturesView.swift */,
@@ -299,6 +305,7 @@
 				E64E8FAA649427B44D78766B /* BackupService.swift in Sources */,
 				AFEA3958E655C85125CB6FA2 /* ContentView.swift in Sources */,
 				0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */,
+				AC2D0BB802E3B3A1EE225E19 /* ThemeSettingsView.swift in Sources */,
 				4113B3EBCEEEFC67A226F35F /* MonthCalendarView.swift in Sources */,
 				A99AB27FC3B8023D3C9AEC97 /* ExportMonthView.swift in Sources */,
 				2CD2FA6F9366482D66931D32 /* SignaturesView.swift in Sources */,
@@ -317,6 +324,7 @@
 				64A158763250FC4E3CBA633C /* JobListView.swift in Sources */,
 				5306540C4DC29AF689D574F8 /* NameEntrySheet.swift in Sources */,
 				524BF5FB64FD3A9A250F5232 /* PreviewSupport.swift in Sources */,
+				38F7DF71126844425DB22FD5 /* ThemePalette.swift in Sources */,
 				7782C5F5F4C72EF04F5FEF62 /* Theme.swift in Sources */,
 				0D4B62633A24B006A182C81E /* AppSettings.swift in Sources */,
 				D03A615D693C499EE60FEFAB /* PrimaryButton.swift in Sources */,
