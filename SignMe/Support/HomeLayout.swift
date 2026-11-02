@@ -3,6 +3,7 @@ import SwiftUI
 /// A card on the Home screen that can be shown, hidden and reordered.
 enum HomeSection: String, CaseIterable, Identifiable {
     case timer
+    case planned
     case target
     case week
     case calendar
@@ -13,6 +14,7 @@ enum HomeSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .timer: "Timer"
+        case .planned: "Planned tasks"
         case .target: "Monthly target"
         case .week: "This week"
         case .calendar: "Calendar"
@@ -23,6 +25,7 @@ enum HomeSection: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .timer: "Clock in and out"
+        case .planned: "Upcoming tasks and ones to confirm"
         case .target: "Progress towards your monthly hours"
         case .week: "Hours per day this week"
         case .calendar: "This month at a glance"
@@ -33,6 +36,7 @@ enum HomeSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .timer: "timer"
+        case .planned: "checklist"
         case .target: "target"
         case .week: "chart.bar.fill"
         case .calendar: "calendar"

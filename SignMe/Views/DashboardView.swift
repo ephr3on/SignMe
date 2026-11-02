@@ -8,6 +8,9 @@ struct DashboardView: View {
     @Query(sort: \Job.createdAt) private var jobs: [Job]
     @Query(sort: \WorkEntry.date, order: .reverse) private var allEntries: [WorkEntry]
     @Query(sort: \RecurringShift.createdAt) private var shifts: [RecurringShift]
+    @Query(sort: \PlannedTask.start) private var plannedTasks: [PlannedTask]
+    @State private var openPlannedTask: PlannedTask?
+    @State private var showingPlanTask = false
 
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
     @AppStorage(AppSettings.Keys.lastProjectID) private var lastProjectID = AppSettings.Defaults.lastProjectID
@@ -57,6 +60,12 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showingExportMonth) {
             ExportMonthSheet(jobs: jobs)
+        }
+        .sheet(item: $openPlannedTask) { task in
+            PlannedTaskSheet(task: task)
+        }
+        .sheet(isPresented: $showingPlanTask) {
+            PlannedTaskEditor()
         }
         .sheet(isPresented: $showingCustomize) {
             NavigationStack {
@@ -145,6 +154,7 @@ struct DashboardView: View {
     private func homeSection(_ section: HomeSection) -> some View {
         switch section {
         case .timer: timerCard
+        case .planned: plannedCard
         case .target: targetCard
         case .week: weekCard
         case .calendar: calendarCard
@@ -477,6 +487,68 @@ struct DashboardView: View {
                 }
             }
             .frame(height: 120)
+        }
+        .card(padding: 16, radius: 22)
+    }
+
+    // MARK: - Planned tasks
+
+    /// Tasks to confirm first, then the next upcoming ones.
+    private var plannedCard: some View {
+        let now = Date.now
+        let open = plannedTasks.filter { $0.status == .planned }
+        let awaiting = open.filter { $0.canConfirm(now: now) }
+        let upcoming = open.filter { !$0.canConfirm(now: now) }
+        let shown = Array((awaiting + upcoming).prefix(3))
+        let projectsByID = Dictionary(allProjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel("Planned")
+                if !awaiting.isEmpty {
+                    Text("\(awaiting.count) to confirm")
+                        .font(.app(.footnote, .semibold))
+                        .foregroundStyle(Theme.gold)
+                } else if !upcoming.isEmpty {
+                    Text("\(upcoming.count) upcoming")
+                        .font(.app(.footnote))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                NavigationLink {
+                    PlannedTasksScreen()
+                } label: {
+                    Text("See all")
+                        .font(.app(.footnote, .semibold))
+                        .foregroundStyle(Theme.gold)
+                        .frame(minHeight: 32)
+                }
+            }
+
+            if shown.isEmpty {
+                Text("Nothing planned. Plan a task and get reminded before it starts.")
+                    .font(.app(.subheadline))
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(shown.enumerated()), id: \.element.id) { index, task in
+                        if index > 0 { Divider().overlay(Theme.hairline) }
+                        Button { openPlannedTask = task } label: {
+                            PlannedTaskRow(task: task, project: projectsByID[task.projectID])
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Button {
+                showingPlanTask = true
+            } label: {
+                Label("Plan a task", systemImage: "plus")
+            }
+            .buttonStyle(OutlineButtonStyle(height: 44))
+            .disabled(allProjects.isEmpty)
         }
         .card(padding: 16, radius: 22)
     }

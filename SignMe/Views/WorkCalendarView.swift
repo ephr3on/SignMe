@@ -18,6 +18,7 @@ struct WorkCalendarView: View {
     @Query(sort: \Job.createdAt) private var jobs: [Job]
     @Query(sort: \WorkEntry.startTime) private var allEntries: [WorkEntry]
     @Query(sort: \RecurringShift.createdAt) private var shifts: [RecurringShift]
+    @Query(sort: \PlannedTask.start) private var plannedTasks: [PlannedTask]
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
     @AppStorage(AppSettings.Keys.weeklyLimitHours) private var weeklyLimit = AppSettings.Defaults.weeklyLimitHours
 
@@ -33,6 +34,8 @@ struct WorkCalendarView: View {
     @State private var entryToEdit: WorkEntry?
     @State private var exportItem: PeriodItem?
     @State private var showingShifts = false
+    @State private var planTaskItem: DayItem?
+    @State private var openTask: PlannedTask?
     @State private var undo: UndoBanner?
 
     private var calendar: Calendar { Calendar.current }
@@ -81,6 +84,14 @@ struct WorkCalendarView: View {
         return calendar.date(from: components) ?? month
     }
 
+    /// Open planned tasks on `day` for the projects shown.
+    private func tasks(on day: Date) -> [PlannedTask] {
+        let ids = visibleProjectIDs
+        return plannedTasks.filter {
+            $0.status == .planned && ids.contains($0.projectID) && calendar.isDate($0.start, inSameDayAs: day)
+        }
+    }
+
     private func pending(on day: Date) -> [RecurringShift] {
         CalendarService.pendingShifts(shifts, on: day, entries: allEntries, projectIDs: visibleProjectIDs)
     }
@@ -115,6 +126,12 @@ struct WorkCalendarView: View {
         }
         .sheet(item: $entryToEdit) { entry in
             EntryFormView(entryToEdit: entry)
+        }
+        .sheet(item: $planTaskItem) { item in
+            PlannedTaskEditor(project: project, day: item.date)
+        }
+        .sheet(item: $openTask) { task in
+            PlannedTaskSheet(task: task)
         }
         .sheet(item: $exportItem) { item in
             ExportMonthSheet(jobs: jobs, initialProject: project, period: item.period)
@@ -234,7 +251,7 @@ struct WorkCalendarView: View {
         let isSelected = !isChoosingRange && calendar.isDate(date, inSameDayAs: selectedDay)
         let inRange = isInRange(date)
         let isRangeEdge = isRangeEndpoint(date)
-        let hasPending = !pending(on: date).isEmpty
+        let hasPending = !pending(on: date).isEmpty || !tasks(on: date).isEmpty
         let projectIDs = Array(Set(dayEntries.compactMap { $0.project?.id })).sorted { $0.uuidString < $1.uuidString }
         let intensity = 0.12 + min(hours, 6) / 6 * 0.28
         let filled = isSelected || isRangeEdge
@@ -284,7 +301,7 @@ struct WorkCalendarView: View {
 
     private func accessibilityValue(hours: Double, pending: Bool) -> String {
         var parts: [String] = [hours > 0 ? DateDurationService.formattedDuration(hours: hours) : "No entries"]
-        if pending { parts.append("regular shift to log") }
+        if pending { parts.append("planned work to log") }
         return parts.joined(separator: ", ")
     }
 
@@ -364,11 +381,24 @@ struct WorkCalendarView: View {
                     .disabled(sourceEntries(daysBefore: 7, target: selectedDay).isEmpty)
             }
 
+            ForEach(tasks(on: selectedDay)) { task in
+                Button { openTask = task } label: {
+                    PlannedTaskRow(task: task, project: findProject(id: task.projectID), showsProject: project == nil)
+                        .padding(12)
+                        .background(Theme.surface.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(Theme.gold.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
             ForEach(planned) { shift in
                 plannedRow(shift)
             }
 
-            if dayEntries.isEmpty && planned.isEmpty {
+            if dayEntries.isEmpty && planned.isEmpty && tasks(on: selectedDay).isEmpty {
                 Text("No entries on this day.")
                     .font(.app(.subheadline))
                     .foregroundStyle(Theme.textSecondary)
@@ -465,6 +495,9 @@ struct WorkCalendarView: View {
     @ViewBuilder
     private func dayActions(for day: Date) -> some View {
         Button("Add entry", systemImage: "plus") { addEntryItem = DayItem(date: day) }
+        if calendar.startOfDay(for: day) >= calendar.startOfDay(for: .now) {
+            Button("Plan a task", systemImage: "checklist") { planTaskItem = DayItem(date: day) }
+        }
         let previous = sourceEntries(daysBefore: 1, target: day)
         Button("Copy previous day (\(previous.count))", systemImage: "doc.on.doc") { copyPreviousDay(to: day) }
             .disabled(previous.isEmpty)

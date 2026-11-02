@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Query private var allEntries: [WorkEntry]
     @Query(sort: \SavedSignature.createdAt) private var signatures: [SavedSignature]
     @Query private var shifts: [RecurringShift]
+    @Query private var plannedTasks: [PlannedTask]
 
     @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
@@ -15,6 +16,11 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.theme) private var themeRawValue = AppSettings.Defaults.theme
     @AppStorage(AppSettings.Keys.homeOrder) private var homeOrderRaw = AppSettings.Defaults.homeOrder
     @AppStorage(AppSettings.Keys.homeHidden) private var homeHiddenRaw = AppSettings.Defaults.homeHidden
+
+    private var plannedSummary: String {
+        let open = plannedTasks.filter { $0.status == .planned }.count
+        return open == 0 ? "None" : "\(open) open"
+    }
 
     private var homeSummary: String {
         let layout = HomeLayout(orderRaw: homeOrderRaw, hiddenRaw: homeHiddenRaw)
@@ -51,6 +57,16 @@ struct SettingsView: View {
                         tint: Color(hex: 0x2E8B62),
                         title: "Targets & limits",
                         value: monthlyTarget > 0 ? "\(Int(monthlyTarget)) h" : "Off"
+                    )
+                }
+                NavigationLink {
+                    PlannedTasksScreen()
+                } label: {
+                    SettingsRow(
+                        icon: "checklist",
+                        tint: Color(hex: 0x8E5BC9),
+                        title: "Planned tasks",
+                        value: plannedSummary
                     )
                 }
                 NavigationLink {
@@ -426,7 +442,7 @@ struct DataSettingsView: View {
                         .foregroundStyle(Theme.danger)
                 }
             } footer: {
-                Text("Permanently deletes every job, project, entry and signature. Export a backup first.")
+                Text("Permanently deletes every job, project, entry, signature, regular shift and planned task. Export a backup first.")
                     .font(.app(.footnote))
             }
             .themedRow()
@@ -465,8 +481,11 @@ struct DataSettingsView: View {
             modelContext.delete(signature)
         }
         try? modelContext.delete(model: RecurringShift.self)
+        try? modelContext.delete(model: PlannedTask.self)
         defaultSignatureID = ""
         try? modelContext.save()
+        let context = modelContext
+        Task { @MainActor in await PlannedTaskNotifications.sync(context: context) }
     }
 }
 

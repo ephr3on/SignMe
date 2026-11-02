@@ -7,10 +7,10 @@ final class HomeLayoutTests: XCTestCase {
     }
 
     func testRoundTrip() {
-        let layout = HomeLayout(order: [.recent, .timer, .calendar, .week, .target], hidden: [.week])
+        let layout = HomeLayout(order: [.recent, .timer, .calendar, .planned, .week, .target], hidden: [.week])
         let parsed = HomeLayout(orderRaw: layout.orderRaw, hiddenRaw: layout.hiddenRaw)
         XCTAssertEqual(parsed, layout)
-        XCTAssertEqual(parsed.visible, [.recent, .timer, .calendar, .target])
+        XCTAssertEqual(parsed.visible, [.recent, .timer, .calendar, .planned, .target])
     }
 
     func testUnknownAndMissingCards() {

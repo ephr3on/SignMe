@@ -25,6 +25,8 @@ private struct AddEntryDate: Identifiable {
 struct WorkEntryListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Job.createdAt) private var allJobs: [Job]
+    @Query(sort: \PlannedTask.start) private var plannedTasks: [PlannedTask]
+    @State private var showingPlanTask = false
 
     let project: Project
 
@@ -69,6 +71,8 @@ struct WorkEntryListView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+
+                plannedStrip
             }
 
             if viewMode == .calendar && !selectionMode {
@@ -109,6 +113,9 @@ struct WorkEntryListView: View {
         .shareSheet(item: $shareItem)
         .sheet(isPresented: $showingAddEntry) {
             EntryFormView(project: project)
+        }
+        .sheet(isPresented: $showingPlanTask) {
+            PlannedTaskEditor(project: project)
         }
         .sheet(item: $entryToEdit) { entry in
             EntryFormView(project: project, entryToEdit: entry)
@@ -304,6 +311,9 @@ struct WorkEntryListView: View {
         } else {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button { showingPlanTask = true } label: {
+                        Label("Plan a Task…", systemImage: "checklist")
+                    }
                     Button { withAnimation { selectionMode = true } } label: {
                         Label("Select Entries", systemImage: "checkmark.circle")
                     }
@@ -329,6 +339,50 @@ struct WorkEntryListView: View {
                 Button { showingAddEntry = true } label: { Image(systemName: "plus") }
                     .accessibilityLabel("Add entry")
             }
+        }
+    }
+
+    // MARK: - Planned tasks
+
+    /// "2 planned · 1 to confirm" link to this project's planned tasks (hidden when there are none).
+    @ViewBuilder
+    private var plannedStrip: some View {
+        let open = plannedTasks.filter { $0.projectID == project.id && $0.status == .planned }
+        if !open.isEmpty {
+            let toConfirm = open.filter { $0.canConfirm() }.count
+            let next = open.first { !$0.canConfirm() }
+            NavigationLink {
+                PlannedTasksScreen(project: project)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: toConfirm > 0 ? "exclamationmark.circle.fill" : "checklist")
+                        .foregroundStyle(Theme.gold)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(toConfirm > 0
+                             ? "\(toConfirm) planned \(toConfirm == 1 ? "task" : "tasks") to confirm"
+                             : "\(open.count) planned \(open.count == 1 ? "task" : "tasks")")
+                            .font(.app(.subheadline, .semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        if let next {
+                            Text("Next: \(next.taskDescription) · \(next.whenText)")
+                                .font(.app(.footnote))
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.app(.footnote, .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
         }
     }
 

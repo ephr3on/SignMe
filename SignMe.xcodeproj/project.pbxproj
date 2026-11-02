@@ -8,9 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		018D9564E1B43623E9F8BA9B /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */; };
+		0E580779BC1E46F9828104A5 /* PlannedTaskNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492603505AD4499F96EE345A /* PlannedTaskNotifications.swift */; };
 		D701027749004AA49D8F4045 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAAAEDAA8114AB29A32E7ED /* CalendarService.swift */; };
 		3A79AFB275847496E58BBEE5 /* TimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C7B984CD999DDBD000BC63 /* TimerStore.swift */; };
 		0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF109843F3D7D055E92BC25 /* DashboardView.swift */; };
+		CD356E4717C2486B9BB39320 /* PlannedTaskViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */; };
 		D213DD28063B4C00AE9F3EC2 /* ShiftTemplatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */; };
 		D8EC308F621C4919AC3A0E32 /* WorkCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */; };
 		AC2D0BB802E3B3A1EE225E19 /* ThemeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 419A2E75E616BE969790B07E /* ThemeSettingsView.swift */; };
@@ -41,6 +43,7 @@
 		AFEA3958E655C85125CB6FA2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 421C4B2B8EAC0C90801E0AE8 /* ContentView.swift */; };
 		B6D734C2E5C3CC0BD79BA7F1 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3341E81DEAE0F7F5C2FA1916 /* Project.swift */; };
 		CEC607E4FFE08FA7DC23A017 /* WorkEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 421EC1259296F12DD841422B /* WorkEntry.swift */; };
+		ECE68599406D434597021E90 /* PlannedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F787E7794B543078A78995E /* PlannedTask.swift */; };
 		6CFDE51BB35D4248BBC9A5A3 /* RecurringShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2639E145754967BF5405D4 /* RecurringShift.swift */; };
 		B5242FEC0D1374D2E986C257 /* SavedSignature.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7174D660AB76F7CE045707F /* SavedSignature.swift */; };
 		CEDDD124FF2F9DD10F48FDC5 /* SearchWorkEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215F07FCA787E3C3D5B46D36 /* SearchWorkEntryView.swift */; };
@@ -71,6 +74,7 @@
 		3341E81DEAE0F7F5C2FA1916 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		421C4B2B8EAC0C90801E0AE8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		421EC1259296F12DD841422B /* WorkEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkEntry.swift; sourceTree = "<group>"; };
+		9F787E7794B543078A78995E /* PlannedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedTask.swift; sourceTree = "<group>"; };
 		AC2639E145754967BF5405D4 /* RecurringShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShift.swift; sourceTree = "<group>"; };
 		A7174D660AB76F7CE045707F /* SavedSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSignature.swift; sourceTree = "<group>"; };
 		484D99162304D7B038A09099 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
@@ -79,9 +83,11 @@
 		32F5310E462D0397476E811E /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		94ECF017CA40442FB7ACA9BD /* HomeLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeLayout.swift; sourceTree = "<group>"; };
 		4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		492603505AD4499F96EE345A /* PlannedTaskNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedTaskNotifications.swift; sourceTree = "<group>"; };
 		0AAAAEDAA8114AB29A32E7ED /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		C3C7B984CD999DDBD000BC63 /* TimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStore.swift; sourceTree = "<group>"; };
 		5EF109843F3D7D055E92BC25 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedTaskViews.swift; sourceTree = "<group>"; };
 		23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTemplatesView.swift; sourceTree = "<group>"; };
 		CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkCalendarView.swift; sourceTree = "<group>"; };
 		419A2E75E616BE969790B07E /* ThemeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsView.swift; sourceTree = "<group>"; };
@@ -118,6 +124,7 @@
 				0208217CDD1F264458CC2936 /* Job.swift */,
 				3341E81DEAE0F7F5C2FA1916 /* Project.swift */,
 				421EC1259296F12DD841422B /* WorkEntry.swift */,
+				9F787E7794B543078A78995E /* PlannedTask.swift */,
 				AC2639E145754967BF5405D4 /* RecurringShift.swift */,
 				A7174D660AB76F7CE045707F /* SavedSignature.swift */,
 			);
@@ -172,6 +179,7 @@
 				DB690EA1B98801CF84E93A4A /* BackupService.swift */,
 				1B0F31F5EC5EDD7AFA7B31FD /* DateDurationService.swift */,
 				4B9AFEF34FD2F5AC305F6336 /* ExportService.swift */,
+				492603505AD4499F96EE345A /* PlannedTaskNotifications.swift */,
 				0AAAAEDAA8114AB29A32E7ED /* CalendarService.swift */,
 				C3C7B984CD999DDBD000BC63 /* TimerStore.swift */,
 			);
@@ -209,6 +217,7 @@
 			isa = PBXGroup;
 			children = (
 				5EF109843F3D7D055E92BC25 /* DashboardView.swift */,
+				1F81B88183164E0A884C0484 /* PlannedTaskViews.swift */,
 				23F842CA30AF4C418B036B24 /* ShiftTemplatesView.swift */,
 				CA4A3B97A80D4155B5E49332 /* WorkCalendarView.swift */,
 				419A2E75E616BE969790B07E /* ThemeSettingsView.swift */,
@@ -320,6 +329,7 @@
 				E64E8FAA649427B44D78766B /* BackupService.swift in Sources */,
 				AFEA3958E655C85125CB6FA2 /* ContentView.swift in Sources */,
 				0634B9E54F9285B2526D8C78 /* DashboardView.swift in Sources */,
+				CD356E4717C2486B9BB39320 /* PlannedTaskViews.swift in Sources */,
 				D213DD28063B4C00AE9F3EC2 /* ShiftTemplatesView.swift in Sources */,
 				D8EC308F621C4919AC3A0E32 /* WorkCalendarView.swift in Sources */,
 				AC2D0BB802E3B3A1EE225E19 /* ThemeSettingsView.swift in Sources */,
@@ -335,6 +345,7 @@
 				72114D58006F92942CE68933 /* ShareSheet.swift in Sources */,
 				BF94353EDCBC7BDF127C1055 /* BackupImporter.swift in Sources */,
 				018D9564E1B43623E9F8BA9B /* ExportService.swift in Sources */,
+				0E580779BC1E46F9828104A5 /* PlannedTaskNotifications.swift in Sources */,
 				D701027749004AA49D8F4045 /* CalendarService.swift in Sources */,
 				3A79AFB275847496E58BBEE5 /* TimerStore.swift in Sources */,
 				8DC967EF1D21917832C06C8E /* Job.swift in Sources */,
@@ -354,6 +365,7 @@
 				A407D923E3E5343A3665CA55 /* SettingsView.swift in Sources */,
 				44DBFDEEF21CFAD96C813C5C /* SignMeApp.swift in Sources */,
 				CEC607E4FFE08FA7DC23A017 /* WorkEntry.swift in Sources */,
+				ECE68599406D434597021E90 /* PlannedTask.swift in Sources */,
 				6CFDE51BB35D4248BBC9A5A3 /* RecurringShift.swift in Sources */,
 				B5242FEC0D1374D2E986C257 /* SavedSignature.swift in Sources */,
 				3D02A745BF97DED275FAA54E /* WorkEntryListView.swift in Sources */,

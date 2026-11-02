@@ -5,6 +5,10 @@ enum AppTab: Hashable {
     case home, jobs, search, settings
 }
 
+private struct TaskLink: Identifiable {
+    let id: UUID
+}
+
 /// Root navigation: a native TabView (each tab keeps its own NavigationStack and
 /// scroll position) with the system tab bar hidden and our own bar in its place —
 /// Home, Jobs, a raised gold "+" that opens a new entry from anywhere, Search, Settings.
@@ -28,6 +32,9 @@ struct ContentView: View {
     @State private var stackGeneration: [AppTab: Int] = [:]
     /// Tabs currently showing their first screen (nothing pushed on top).
     @State private var tabsAtRoot: Set<AppTab> = [.home, .jobs, .search, .settings]
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    private var router: PlannedTaskRouter { PlannedTaskRouter.shared }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -60,6 +67,19 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingNewEntry) {
             EntryFormView()
+        }
+        // A tapped planned-task reminder opens that task.
+        .sheet(item: Binding(
+            get: { router.openTaskID.map(TaskLink.init) },
+            set: { router.openTaskID = $0?.id }
+        )) { link in
+            PlannedTaskLinkSheet(taskID: link.id)
+        }
+        // Keep reminders in step with stored tasks (edits, imports, time zone changes).
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            guard phase == .active else { return }
+            let context = modelContext
+            Task { @MainActor in await PlannedTaskNotifications.sync(context: context) }
         }
     }
 
