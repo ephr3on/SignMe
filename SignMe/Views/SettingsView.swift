@@ -104,6 +104,7 @@ struct SettingsView: View {
         }
         .listSectionSpacing(18)
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Settings")
     }
 
@@ -209,6 +210,7 @@ struct TimesheetSettingsView: View {
             .themedRow()
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Timesheet details")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -274,6 +276,7 @@ struct MonthlyTargetSettingsView: View {
             .themedRow()
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Monthly target")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -356,6 +359,7 @@ struct DataSettingsView: View {
         }
         .listSectionSpacing(18)
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Backup & export")
         .navigationBarTitleDisplayMode(.inline)
         .backupImporter(isPresented: $showingImporter, existingJobs: jobs)

@@ -78,6 +78,7 @@ struct ProjectListView: View {
             }
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle(job.name)
         .navigationDestination(item: $selectedProject) { project in
             WorkEntryListView(project: project)

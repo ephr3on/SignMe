@@ -77,6 +77,7 @@ struct SignaturesView: View {
             }
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Signatures")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(

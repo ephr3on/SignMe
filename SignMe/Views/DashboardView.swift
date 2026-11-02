@@ -34,6 +34,7 @@ struct DashboardView: View {
             .padding(.bottom, 32)
         }
         .themedScreen()
+        .tabBarSpace()
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $timerEntry) { item in
             EntryFormView(

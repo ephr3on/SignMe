@@ -78,6 +78,7 @@ struct ThemeSettingsView: View {
             .padding(.bottom, 32)
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -255,6 +256,7 @@ struct CustomThemeEditor: View {
             .padding(.bottom, 32)
         }
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Custom theme")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: accent) { _, _ in apply() }

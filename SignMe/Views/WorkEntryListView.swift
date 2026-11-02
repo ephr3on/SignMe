@@ -102,6 +102,8 @@ struct WorkEntryListView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        // Outermost: keeps the list and the selection bar above the app's tab bar.
+        .tabBarSpace()
         .animation(.easeInOut(duration: 0.2), value: selectionMode)
         .onAppear(perform: applyInitialExpansion)
         .onChange(of: project.entries.count) { oldCount, newCount in

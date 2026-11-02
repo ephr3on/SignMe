@@ -9,21 +9,40 @@ enum AppTab: Hashable {
 /// scroll position) with the system tab bar hidden and our own bar in its place —
 /// Home, Jobs, a raised gold "+" that opens a new entry from anywhere, Search, Settings.
 ///
-/// The bar is attached inside every tab, directly on its NavigationStack. A TabView
-/// doesn't pass an outer safe-area inset down to its tabs, so attaching it there is
-/// what makes every screen (including pushed ones) end its content above the bar
-/// instead of scrolling underneath it. The bar steps aside while the keyboard is up.
+/// The bar is a fixed layer at the bottom of the window. Its measured height is
+/// handed to every screen through the `tabBarInset` environment value, and each
+/// screen reserves that much room at its bottom with `.tabBarSpace()` — so the last
+/// row of every list, form and page always ends above the bar instead of under it.
+/// (Insets set outside a TabView or NavigationStack don't reliably reach the
+/// screens inside, so each screen reserves the space itself.)
+/// The bar steps aside while the keyboard is up.
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var showingNewEntry = false
     @State private var keyboardVisible = false
+    @State private var tabBarHeight: CGFloat = 96
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            tab(.home) { DashboardView() }
-            tab(.jobs) { JobListView() }
-            tab(.search) { SearchWorkEntryView() }
-            tab(.settings) { SettingsView() }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                tab(.home) { DashboardView() }
+                tab(.jobs) { JobListView() }
+                tab(.search) { SearchWorkEntryView() }
+                tab(.settings) { SettingsView() }
+            }
+            .environment(\.tabBarInset, keyboardVisible ? 0 : tabBarHeight)
+
+            if !keyboardVisible {
+                AppTabBar(selection: $selectedTab) { showingNewEntry = true }
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { tabBarHeight = proxy.size.height }
+                                .onChange(of: proxy.size.height) { _, height in tabBarHeight = height }
+                        }
+                    )
+                    .transition(.opacity)
+            }
         }
         .background(Theme.background.ignoresSafeArea())
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
@@ -39,14 +58,44 @@ struct ContentView: View {
 
     private func tab<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack { content() }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !keyboardVisible {
-                    AppTabBar(selection: $selectedTab) { showingNewEntry = true }
-                        .transition(.opacity)
-                }
-            }
             .tag(tab)
             .toolbar(.hidden, for: .tabBar)
+    }
+}
+
+// MARK: - Reserving room for the tab bar
+
+private struct TabBarInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// Height of the app's bottom tab bar above the home-indicator area (0 when hidden,
+    /// e.g. while the keyboard is up or inside sheets).
+    var tabBarInset: CGFloat {
+        get { self[TabBarInsetKey.self] }
+        set { self[TabBarInsetKey.self] = newValue }
+    }
+}
+
+private struct TabBarSpaceModifier: ViewModifier {
+    @Environment(\.tabBarInset) private var inset
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear
+                .frame(height: inset)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+extension View {
+    /// Keeps this screen's content above the app's tab bar. Apply it to every
+    /// screen shown inside a tab (root and pushed screens); sheets don't need it.
+    func tabBarSpace() -> some View {
+        modifier(TabBarSpaceModifier())
     }
 }
 

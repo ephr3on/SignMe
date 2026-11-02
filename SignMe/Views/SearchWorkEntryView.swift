@@ -125,6 +125,7 @@ struct SearchWorkEntryView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .themedScreen()
+        .tabBarSpace()
         .navigationTitle("Search")
         .sheet(item: $entryToEdit) { entry in
             EntryFormView(entryToEdit: entry)

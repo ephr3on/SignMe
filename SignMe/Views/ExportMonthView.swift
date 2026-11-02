@@ -147,6 +147,7 @@ struct ExportMonthSheet: View {
                             }
                         }
                 }
+                .environment(\.tabBarInset, 0)   // no tab bar inside this sheet
             }
             .onAppear {
                 preselectSignature()
