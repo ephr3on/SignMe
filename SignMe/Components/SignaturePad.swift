@@ -18,6 +18,7 @@ struct SignaturePad: UIViewRepresentable {
         canvas.overrideUserInterfaceStyle = .light   // keep ink dark blue in dark mode
         canvas.isScrollEnabled = false
         canvas.drawing = drawing
+        // Set the delegate after the initial drawing so loading it isn't reported back.
         canvas.delegate = context.coordinator
         canvas.accessibilityLabel = "Signature drawing area"
         return canvas
@@ -26,18 +27,25 @@ struct SignaturePad: UIViewRepresentable {
     func updateUIView(_ canvas: PKCanvasView, context: Context) {
         // Only push changes that came from outside (e.g. the Clear button).
         if drawing.strokes.isEmpty && !canvas.drawing.strokes.isEmpty {
+            // Writing the canvas fires the delegate; ignore that echo so SwiftUI
+            // state isn't modified while this view is being updated.
+            context.coordinator.isApplyingUpdate = true
             canvas.drawing = drawing
+            context.coordinator.isApplyingUpdate = false
         }
     }
 
     final class Coordinator: NSObject, PKCanvasViewDelegate {
         private var drawing: Binding<PKDrawing>
+        /// True while `updateUIView` pushes a drawing into the canvas.
+        var isApplyingUpdate = false
 
         init(drawing: Binding<PKDrawing>) {
             self.drawing = drawing
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            guard !isApplyingUpdate else { return }
             drawing.wrappedValue = canvasView.drawing
         }
     }
