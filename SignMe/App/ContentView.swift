@@ -16,11 +16,18 @@ enum AppTab: Hashable {
 /// (Insets set outside a TabView or NavigationStack don't reliably reach the
 /// screens inside, so each screen reserves the space itself.)
 /// The bar steps aside while the keyboard is up.
+///
+/// Tapping the tab you're already on takes you back to that tab's first screen
+/// (e.g. Jobs › job › project → tap Jobs → the Jobs list).
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var showingNewEntry = false
     @State private var keyboardVisible = false
     @State private var tabBarHeight: CGFloat = 96
+    /// Bumped to rebuild a tab's NavigationStack, which returns it to its first screen.
+    @State private var stackGeneration: [AppTab: Int] = [:]
+    /// Tabs currently showing their first screen (nothing pushed on top).
+    @State private var tabsAtRoot: Set<AppTab> = [.home, .jobs, .search, .settings]
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -33,7 +40,7 @@ struct ContentView: View {
             .environment(\.tabBarInset, keyboardVisible ? 0 : tabBarHeight)
 
             if !keyboardVisible {
-                AppTabBar(selection: $selectedTab) { showingNewEntry = true }
+                AppTabBar(selection: $selectedTab, onReselect: popToRoot) { showingNewEntry = true }
                     .background(
                         GeometryReader { proxy in
                             Color.clear
@@ -57,9 +64,27 @@ struct ContentView: View {
     }
 
     private func tab<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
-        NavigationStack { content() }
-            .tag(tab)
-            .toolbar(.hidden, for: .tabBar)
+        let generation = stackGeneration[tab, default: 0]
+        return NavigationStack {
+            content()
+                // The first screen disappears when something is pushed on top of it
+                // (or the tab is left) and reappears when it's visible again.
+                .onAppear { tabsAtRoot.insert(tab) }
+                .onDisappear {
+                    // Ignore the old stack's first screen going away after a reset.
+                    if stackGeneration[tab, default: 0] == generation { tabsAtRoot.remove(tab) }
+                }
+        }
+        .id(generation)
+        .tag(tab)
+        .toolbar(.hidden, for: .tabBar)
+    }
+
+    /// Tapping the selected tab again: go back to its first screen.
+    private func popToRoot(_ tab: AppTab) {
+        guard !tabsAtRoot.contains(tab) else { return }
+        stackGeneration[tab, default: 0] += 1
+        tabsAtRoot.insert(tab)
     }
 }
 
@@ -102,6 +127,8 @@ extension View {
 /// Bottom tab bar: Home, Jobs, [+], Search, Settings.
 struct AppTabBar: View {
     @Binding var selection: AppTab
+    /// Called when the already-selected tab is tapped again.
+    var onReselect: (AppTab) -> Void = { _ in }
     let onAdd: () -> Void
 
     /// How far the round + button rises above the bar.
@@ -135,7 +162,11 @@ struct AppTabBar: View {
     private func item(_ tab: AppTab, title: String, icon: String, selectedIcon: String) -> some View {
         let isSelected = selection == tab
         return Button {
-            selection = tab
+            if isSelected {
+                onReselect(tab)
+            } else {
+                selection = tab
+            }
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? selectedIcon : icon)
@@ -151,6 +182,7 @@ struct AppTabBar: View {
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isSelected ? "Goes back to the first \(title) screen" : "")
     }
 
     private var addButton: some View {
