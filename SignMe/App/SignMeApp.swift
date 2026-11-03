@@ -4,7 +4,7 @@ import SwiftData
 @main
 struct SignMeApp: App {
     let modelContainer: ModelContainer = {
-        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self])
+        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self, ExportTemplate.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])

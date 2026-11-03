@@ -137,7 +137,11 @@ struct WorkEntryListView: View {
             })
         }
         .sheet(isPresented: $showingExportRange) {
-            ExportRangeSheet(project: project)
+            ExportMonthSheet(
+                jobs: allJobs,
+                initialProject: project,
+                period: .days(project.entries.map(\.date).min() ?? .now, project.entries.map(\.date).max() ?? .now)
+            )
         }
         .confirmationDialog(
             "Delete this entry?",
@@ -590,74 +594,6 @@ struct WorkEntryListView: View {
             destination.entries.append(copy)
         }
         exitSelectionMode()
-    }
-}
-
-/// Lets the user pick a date range and export the matching entries as CSV.
-private struct ExportRangeSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let project: Project
-
-    @State private var startDate: Date
-    @State private var endDate: Date
-    @State private var shareItem: ShareItem?
-
-    init(project: Project) {
-        self.project = project
-        let dates = project.entries.map(\.date)
-        _startDate = State(initialValue: dates.min() ?? .now)
-        _endDate = State(initialValue: dates.max() ?? .now)
-    }
-
-    private var filteredEntries: [WorkEntry] {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: startDate)
-        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate)) ?? endDate
-        return project.entries.filter { $0.date >= start && $0.date < end }
-    }
-
-    private func exportCSV() {
-        let entries = filteredEntries
-        guard !entries.isEmpty else { return }
-        shareItem = ShareItem(ExportService.csvExportURL(entries: entries, filenamePrefix: "\(project.name)-Range"))
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Range") {
-                    DatePicker("From", selection: $startDate, displayedComponents: .date)
-                    DatePicker("To", selection: $endDate, displayedComponents: .date)
-                }
-                .themedRow()
-                Section {
-                    HStack {
-                        Text("Matching Entries")
-                        Spacer()
-                        Text("\(filteredEntries.count)").foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .themedRow()
-                Section {
-                    if !filteredEntries.isEmpty {
-                        Button(action: exportCSV) {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
-                        }
-                    } else {
-                        Label("No entries in this range", systemImage: "tray")
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .themedRow()
-            }
-            .themedScreen()
-            .navigationTitle("Export Range")
-            .navigationBarTitleDisplayMode(.inline)
-            .shareSheet(item: $shareItem)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
-        }
     }
 }
 

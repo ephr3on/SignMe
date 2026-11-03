@@ -9,7 +9,7 @@ final class PlannedTaskTests: XCTestCase {
     private let calendar = Calendar(identifier: .gregorian)
 
     override func setUp() async throws {
-        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self])
+        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self, ExportTemplate.self])
         container = try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
         context = container.mainContext
     }

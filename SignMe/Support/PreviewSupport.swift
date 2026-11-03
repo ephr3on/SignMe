@@ -6,7 +6,7 @@ import SwiftData
 @MainActor
 enum PreviewSupport {
     static let container: ModelContainer = {
-        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self])
+        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self, RecurringShift.self, PlannedTask.self, ExportTemplate.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: [config])
         let context = container.mainContext

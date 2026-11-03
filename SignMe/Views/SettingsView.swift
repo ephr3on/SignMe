@@ -10,6 +10,7 @@ struct SettingsView: View {
     @Query(sort: \SavedSignature.createdAt) private var signatures: [SavedSignature]
     @Query private var shifts: [RecurringShift]
     @Query private var plannedTasks: [PlannedTask]
+    @Query private var exportTemplates: [ExportTemplate]
 
     @AppStorage(AppSettings.Keys.signerName) private var signerName = AppSettings.Defaults.signerName
     @AppStorage(AppSettings.Keys.monthlyTargetHours) private var monthlyTarget = AppSettings.Defaults.monthlyTargetHours
@@ -66,6 +67,16 @@ struct SettingsView: View {
                         tint: Color(hex: 0x2E8B62),
                         title: "Targets & limits",
                         value: monthlyTarget > 0 ? "\(Int(monthlyTarget)) h" : "Off"
+                    )
+                }
+                NavigationLink {
+                    ExportTemplatesView(jobs: jobs)
+                } label: {
+                    SettingsRow(
+                        icon: "doc.badge.gearshape",
+                        tint: Color(hex: 0x1F8A9B),
+                        title: "Export templates",
+                        value: exportTemplates.isEmpty ? "None" : "\(exportTemplates.count)"
                     )
                 }
                 NavigationLink {
@@ -187,7 +198,7 @@ struct SettingsView: View {
     }
 
     private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
     }
@@ -505,6 +516,7 @@ struct DataSettingsView: View {
         }
         try? modelContext.delete(model: RecurringShift.self)
         try? modelContext.delete(model: PlannedTask.self)
+        try? modelContext.delete(model: ExportTemplate.self)
         defaultSignatureID = ""
         try? modelContext.save()
         let context = modelContext
