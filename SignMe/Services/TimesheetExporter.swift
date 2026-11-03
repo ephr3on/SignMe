@@ -43,8 +43,8 @@ enum TimesheetExporter {
             case .start: de ? "Beginn" : "Start"
             case .end: de ? "Ende" : "End"
             case .breakTime: de ? "Pause" : "Break"
-            case .duration: de ? "Dauer" : "Duration"
-            case .decimalHours: de ? "Stunden" : "Hours"
+            case .duration: de ? "Stunden" : "Hours"
+            case .decimalHours: de ? "Dezimal" : "Decimal"
             case .description: de ? "Tätigkeit" : "Description"
             case .project: de ? "Projekt" : "Project"
             case .job: de ? "Stelle" : "Job"
@@ -95,9 +95,13 @@ enum TimesheetExporter {
         func weekday(_ date: Date) -> String { weekdayFormatter.string(from: date) }
         func time(_ date: Date) -> String { timeFormatter.string(from: date) }
         func decimal(_ hours: Double) -> String { number.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours) }
-        func duration(_ hours: Double) -> String {
-            let minutes = Int((hours * 60).rounded())
-            return String(format: "%d:%02d", minutes / 60, minutes % 60)
+        /// "4h 55min" on sheets; "4:55" in spreadsheets so it stays calculable.
+        func duration(_ hours: Double, forCSV: Bool = false) -> String {
+            let minutes = max(0, Int((hours * 60).rounded()))
+            if forCSV { return String(format: "%d:%02d", minutes / 60, minutes % 60) }
+            let h = minutes / 60, m = minutes % 60
+            if h == 0 { return "\(m)min" }
+            return m == 0 ? "\(h)h" : "\(h)h \(m)min"
         }
         func breakText(_ minutes: Int) -> String {
             minutes == 0 ? "—" : (language == .german ? "\(minutes) Min." : "\(minutes) min")
@@ -165,7 +169,7 @@ enum TimesheetExporter {
                     .start: format.time(start),
                     .end: format.time(end) + (calendar.isDate(start, inSameDayAs: end) ? "" : " (+1)"),
                     .breakTime: forCSV ? String(breaks) : format.breakText(breaks),
-                    .duration: format.duration(hours),
+                    .duration: format.duration(hours, forCSV: forCSV),
                     .decimalHours: format.decimal(hours)
                 ]
                 values[.description] = unique(items.map(\.taskDescription))
@@ -183,7 +187,7 @@ enum TimesheetExporter {
                     .start: format.time(entry.startTime),
                     .end: end,
                     .breakTime: forCSV ? String(entry.breakMinutes) : format.breakText(entry.breakMinutes),
-                    .duration: format.duration(entry.durationHours),
+                    .duration: format.duration(entry.durationHours, forCSV: forCSV),
                     .decimalHours: format.decimal(entry.durationHours),
                     .description: entry.taskDescription,
                     .project: entry.project?.name ?? "",
@@ -223,7 +227,7 @@ enum TimesheetExporter {
                 guard let currentWeek, let weekStart else { return }
                 let label = "\(labels.week) \(currentWeek.weekOfYear ?? 0)"
                 result.append(Row(kind: .weekSubtotal, date: weekStart, values: [
-                    .duration: format.duration(weekHours),
+                    .duration: format.duration(weekHours, forCSV: forCSV),
                     .decimalHours: format.decimal(weekHours)
                 ], hours: weekHours, label: label))
             }
@@ -343,7 +347,7 @@ enum TimesheetExporter {
             lines.append(line(columns.enumerated().map { index, column in
                 if index == 0 { return labels.total }
                 switch column {
-                case .duration: return format.duration(total)
+                case .duration: return format.duration(total, forCSV: true)
                 case .decimalHours: return format.decimal(total)
                 default: return ""
                 }
@@ -528,7 +532,7 @@ enum TimesheetExporter {
                     if index == 0 {
                         text = row.label
                         if !columns.contains(.duration) && !columns.contains(.decimalHours) {
-                            text += ": \(format.duration(row.hours)) h"
+                            text += ": \(format.duration(row.hours))"
                         }
                     }
                 case .emptyDay:
@@ -566,10 +570,14 @@ enum TimesheetExporter {
             image.draw(in: CGRect(x: lineX, y: lineY - size.height + 4, width: size.width, height: size.height))
         }
 
-        // Summary lines
+        // Summary lines: hours and minutes, plus decimal hours only when that column is shown.
+        func hoursText(_ hours: Double) -> String {
+            let text = format.duration(hours)
+            return columns.contains(.decimalHours) ? "\(text) (\(format.decimal(hours)) h)" : text
+        }
         var summary: [(String, UIFont)] = []
         if options.showTotal {
-            summary.append(("\(labels.total): \(format.duration(totalHours)) h (\(format.decimal(totalHours)) h)", totalFont))
+            summary.append(("\(labels.total): \(hoursText(totalHours))", totalFont))
         }
         if options.showDaysWorked {
             summary.append(("\(labels.daysWorked): \(daysWorked)", valueFont))
@@ -577,7 +585,7 @@ enum TimesheetExporter {
         if options.showProjectTotals, projects.count > 1 {
             for project in projects {
                 let hours = entries.filter { $0.project?.id == project.id && period.contains($0.date) }.reduce(0) { $0 + $1.durationHours }
-                summary.append(("\(project.name): \(format.duration(hours)) h (\(format.decimal(hours)) h)", labelFont))
+                summary.append(("\(project.name): \(hoursText(hours))", labelFont))
             }
         }
 

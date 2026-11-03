@@ -164,7 +164,7 @@ struct WorkCalendarView: View {
                 Text(month.formatted(.dateTime.month(.wide).year()))
                     .font(Theme.display(.title3))
                     .foregroundStyle(Theme.textPrimary)
-                Text("\(DateDurationService.formattedDuration(hours: total)) · \(DateDurationService.formattedDecimalHours(total)) h")
+                Text(DateDurationService.formattedDuration(hours: total))
                     .font(.app(.footnote))
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
@@ -553,7 +553,7 @@ struct WorkCalendarView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                stat("Total", "\(DateDurationService.formattedDuration(hours: insights.totalHours))", sub: "\(DateDurationService.formattedDecimalHours(insights.totalHours)) h")
+                stat("Total", "\(DateDurationService.formattedDuration(hours: insights.totalHours))", sub: "this month")
                 stat("Days worked", "\(insights.daysWorked)", sub: insights.daysWorked == 1 ? "day" : "days")
                 stat("Average", DateDurationService.formattedDuration(hours: insights.averagePerWorkedDay), sub: "per worked day")
                 stat(

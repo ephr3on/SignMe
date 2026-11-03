@@ -254,7 +254,7 @@ struct SearchWorkEntryView: View {
         let entries = results
         if !allEntries.isEmpty && !entries.isEmpty {
             let hours = entries.reduce(0) { $0 + $1.durationHours }
-            Text("\(entries.count) \(entries.count == 1 ? "entry" : "entries") · \(DateDurationService.formattedDuration(hours: hours)) (\(DateDurationService.formattedDecimalHours(hours)) h)")
+            Text("\(entries.count) \(entries.count == 1 ? "entry" : "entries") · \(DateDurationService.formattedDuration(hours: hours))")
                 .font(.app(.footnote, .medium))
                 .foregroundStyle(Theme.textSecondary)
                 .monospacedDigit()

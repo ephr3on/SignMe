@@ -328,7 +328,7 @@ enum ExportService {
                 DateDurationService.timeFormatter.string(from: entry.startTime),
                 endText,
                 entry.breakMinutes > 0 ? DateDurationService.formattedDuration(hours: Double(entry.breakMinutes) / 60) : "—",
-                DateDurationService.formattedDecimalHours(entry.durationHours),
+                DateDurationService.formattedDuration(hours: entry.durationHours),
                 entry.taskDescription
             ]
             let taskBounds = (entry.taskDescription as NSString).boundingRect(
@@ -477,7 +477,7 @@ enum ExportService {
                 y += 4
                 drawDivider(at: y)
                 y += 12
-                let totalText = "Total: \(DateDurationService.formattedDuration(hours: totalHours)) (\(DateDurationService.formattedDecimalHours(totalHours)) h)"
+                let totalText = "Total: \(DateDurationService.formattedDuration(hours: totalHours))"
                 (totalText as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: [.font: totalFont])
                 y += 24
 

@@ -72,11 +72,11 @@ final class DateDurationServiceTests: XCTestCase {
     }
 
     func testFormattedDuration() {
-        XCTAssertEqual(DateDurationService.formattedDuration(hours: 1.5), "1h 30m")
-        XCTAssertEqual(DateDurationService.formattedDuration(hours: 0.75), "45m")
+        XCTAssertEqual(DateDurationService.formattedDuration(hours: 1.5), "1h 30min")
+        XCTAssertEqual(DateDurationService.formattedDuration(hours: 0.75), "45min")
         XCTAssertEqual(DateDurationService.formattedDuration(hours: 2), "2h")
-        XCTAssertEqual(DateDurationService.formattedDuration(hours: 0), "0m")
-        XCTAssertEqual(DateDurationService.formattedDuration(hours: .nan), "0m")
+        XCTAssertEqual(DateDurationService.formattedDuration(hours: 0), "0min")
+        XCTAssertEqual(DateDurationService.formattedDuration(hours: .nan), "0min")
     }
 
     func testFormattedDecimalHoursIsLocaleAware() {

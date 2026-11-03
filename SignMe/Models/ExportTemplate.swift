@@ -84,8 +84,8 @@ struct ExportOptions: Codable, Equatable {
             case .start: "Start"
             case .end: "End"
             case .breakTime: "Break"
-            case .duration: "Duration (h:mm)"
-            case .decimalHours: "Hours (decimal)"
+            case .duration: "Hours (h min)"
+            case .decimalHours: "Decimal hours"
             case .description: "Description"
             case .project: "Project"
             case .job: "Job"
@@ -99,7 +99,7 @@ struct ExportOptions: Codable, Equatable {
             case .start: 0.08
             case .end: 0.10
             case .breakTime: 0.08
-            case .duration: 0.09
+            case .duration: 0.11
             case .decimalHours: 0.08
             case .description: 0.30
             case .project: 0.15
@@ -157,7 +157,7 @@ struct ExportOptions: Codable, Equatable {
     var showGeneratedDate = true
     var showPageNumbers = true
 
-    static let defaultColumns: [Column] = [.date, .start, .end, .breakTime, .decimalHours, .description]
+    static let defaultColumns: [Column] = [.date, .start, .end, .breakTime, .duration, .description]
 
     init() {}
 

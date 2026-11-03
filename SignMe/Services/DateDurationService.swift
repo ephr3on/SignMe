@@ -46,16 +46,16 @@ enum DateDurationService {
         end > start && !calendar.isDate(start, inSameDayAs: end)
     }
 
-    /// Formats hours as a short, human-readable duration string, e.g. "1h 30m", "45m", "2h".
+    /// Formats hours as hours and minutes, e.g. "4h 55min", "45min", "2h".
     static func formattedDuration(hours: Double) -> String {
-        guard hours.isFinite, hours > 0 else { return "0m" }
+        guard hours.isFinite, hours > 0 else { return "0min" }
         let totalMinutes = Int((hours * 60).rounded())
         let h = totalMinutes / 60
         let m = totalMinutes % 60
         switch (h, m) {
-        case (0, let m): return "\(m)m"
+        case (0, let m): return "\(m)min"
         case (let h, 0): return "\(h)h"
-        default: return "\(h)h \(m)m"
+        default: return "\(h)h \(m)min"
         }
     }
 

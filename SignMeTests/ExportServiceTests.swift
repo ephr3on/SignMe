@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import PDFKit
+import SwiftData
 @testable import SignMe
 
 final class ExportServiceTests: XCTestCase {
@@ -32,7 +33,7 @@ final class ExportServiceTests: XCTestCase {
         XCTAssertTrue(csv.hasPrefix("\u{FEFF}Job;Project;Date;Start;End Date;End;Break (min);Hours;Duration;Task Description\r\n"))
 
         let row = csv.components(separatedBy: "\r\n")[1]
-        XCTAssertEqual(row, ";;2026-11-02;09:00;2026-11-02;17:00;30;7,50;7h 30m;\"Prüfung; vorbereiten\"")
+        XCTAssertEqual(row, ";;2026-11-02;09:00;2026-11-02;17:00;30;7,50;7h 30min;\"Prüfung; vorbereiten\"")
     }
 
     func testSanitizedFilename() {
@@ -79,18 +80,26 @@ final class ExportServiceTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testSeveralProjectsExportOnePDFEachSkippingEmpty() throws {
+        let schema = Schema([Job.self, Project.self, WorkEntry.self, SavedSignature.self])
+        let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+        let context = container.mainContext
+
         let calendar = Calendar.current
         let monthDate = calendar.date(from: DateComponents(year: 2026, month: 10, day: 1))!
         let start = calendar.date(from: DateComponents(year: 2026, month: 10, day: 6, hour: 9))!
         let job = Job(name: "Studienkolleg")
+        context.insert(job)
 
         func project(_ name: String, withEntry: Bool) -> Project {
             let project = Project(name: name)
-            project.job = job
+            context.insert(project)
+            job.projects.append(project)
             if withEntry {
                 let entry = WorkEntry(date: start, startTime: start, endTime: start.addingTimeInterval(7200), taskDescription: "Work")
-                project.entries = [entry]
+                context.insert(entry)
+                project.entries.append(entry)
             }
             return project
         }
