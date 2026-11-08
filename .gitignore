@@ -16,3 +16,21 @@ build/
 /Adobe Express - file_croped.png
 /candyicons-appicons-*.zip
 /icon_extract/
+
+# Build products & archives
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+*.hmap
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local tool folders
+.claude/
