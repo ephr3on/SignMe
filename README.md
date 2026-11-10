@@ -1,6 +1,6 @@
 # SignMe
 
-An iPhone app for logging work hours and turning them into signed monthly timesheets.
+An iOS app for logging work hours and turning them into signed monthly timesheets.
 
 Built with SwiftUI and SwiftData, iOS 17+.
 
